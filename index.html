@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mustard Seed School CBT Portal</title>
+    <style>
+    /* 1. ANIMATED BACKGROUND SETUP */
+    body {
+        /* Remove background-color and add image properties */
+        background-color: #f4f4f9; /* Fallback color */
+        background-size: cover;
+        background-position: center center;
+        background-repeat: no-repeat;
+        /* Apply the 24-second animation */
+        animation: slidechange 24s infinite; 
+        
+        /* Ensure content stays readable over the background */
+        font-family: Arial, sans-serif; 
+        text-align: center; 
+        margin-top: 100px;
+    }
+    h1 { 
+        color: white; /* Changed text color for readability over dark backgrounds */
+        text-shadow: 1px 1px 3px #000;
+        margin-bottom: 10px; 
+    }
+    p { 
+        color: #ecf0f1; /* Light text for readability */
+        text-shadow: 1px 1px 3px #000;
+    }
+
+    /* 2. BUTTON STYLING (Kept for continuity) */
+    .cbt-button {
+        padding: 15px 30px;
+        font-size: 20px;
+        font-weight: bold;
+        background-color: #3498db; 
+        color: white;
+        text-decoration: none; 
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        display: inline-block;
+        margin-top: 30px;
+        transition: background-color 0.3s ease;
+    }
+    .cbt-button:hover {
+        background-color: #2980b9;
+    }
+
+    /* 3. KEYFRAME ANIMATION (The magic) */
+    @keyframes slidechange {
+        0%   { background-image: url('images/bg1.jpg'); } /* Start with Image 1 */
+        25%  { background-image: url('images/bg1.jpg'); } /* Hold Image 1 */
+        33%  { background-image: url('images/bg2.jpg'); } /* Fade/Change to Image 2 */
+        58%  { background-image: url('images/bg2.jpg'); } /* Hold Image 2 */
+        66%  { background-image: url('images/bg3.jpg'); } /* Fade/Change to Image 3 */
+        91%  { background-image: url('images/bg3.jpg'); } /* Hold Image 3 */
+        100% { background-image: url('images/bg1.jpg'); } /* Loop back to Image 1 */
+    }
+</style>
+    </style>
+</head>
+<body>
+    <h1>Welcome to the Mustard Seed School CBT Portal</h1>
+    <p>Click the button below to start your Computer Based Test.</p>
+    
+    <a href="CBT.html" class="cbt-button">GO TO CBT EXAM</a>
+    
+</body>
+</html>

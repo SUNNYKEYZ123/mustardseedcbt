@@ -1018,16 +1018,15 @@ React.useEffect(() => {
           React.useEffect(() => {
             try {
               // REPLACE THIS firebaseConfig OBJECT WITH YOUR ACTUAL FIREBASE PROJECT'S CONFIG
-              const firebaseConfig = {
-                apiKey: "AIzaSyDCcGtC_wwfkVpRML5yevE-Y1YuNOPuDOw",
-                authDomain: "ss3-cbt-system-ad2cb.firebaseapp.com",
-                projectId: "ss3-cbt-system-ad2cb",
-                storageBucket:"ss3-cbt-system-ad2cb.firebasestorage.app",
-                messagingSend9erId: "221297393678",
-                appId: "1:221297393678:web:71208cdf9ed3d060f93c5f",
-                // measurementId: "G-N54GPLYMCJ" // Include if present
-              };
-
+             const firebaseConfig = {
+  apiKey: "AIzaSyDOO3uHmzOuAxJcdLxu-OImzlH12A6FpeY",
+  authDomain: "my-project-a6208.firebaseapp.com",
+  projectId: "my-project-a6208",
+  storageBucket: "my-project-a6208.firebasestorage.app",
+  messagingSenderId: "784486701962",
+  appId: "1:784486701962:web:0d3cd002bbfd647e944673",
+  measurementId: "G-DDVFJ0ST1X"
+};
               const app = initializeApp(firebaseConfig);
               const firestore = getFirestore(app);
               const firebaseAuth = getAuth(app);
@@ -1100,3 +1099,4 @@ React.useEffect(() => {
 </body>
 
 </html>
+

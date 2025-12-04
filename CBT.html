@@ -1015,18 +1015,20 @@ React.useEffect(() => {
             });
           };
 
-          React.useEffect(() => {
+React.useEffect(() => {
             try {
-              // REPLACE THIS firebaseConfig OBJECT WITH YOUR ACTUAL FIREBASE PROJECT'S CONFIG
-             const firebaseConfig = {
-  apiKey: "AIzaSyDOO3uHmzOuAxJcdLxu-OImzlH12A6FpeY",
-  authDomain: "my-project-a6208.firebaseapp.com",
-  projectId: "my-project-a6208",
-  storageBucket: "my-project-a6208.firebasestorage.app",
-  messagingSenderId: "784486701962",
-  appId: "1:784486701962:web:0d3cd002bbfd647e944673",
-  measurementId: "G-DDVFJ0ST1X"
-};
+              // FIREBASE CONFIGURATION (The public, clean config for deployment)
+              const firebaseConfig = {
+                apiKey: "AIzaSyDOO3uHmzOuAxJcdLxu-OImzlH12A6FpeY",
+                authDomain: "my-project-a6208.firebaseapp.com",
+                projectId: "my-project-a6208",
+                storageBucket: "my-project-a6208.firebasestorage.app",
+                messagingSenderId: "784486701962",
+                appId: "1:784486701962:web:0d3cd002bbfd647e944673",
+                measurementId: "G-DDVFJ0ST1X"
+              };
+
+              // INITIALIZE FIREBASE & SET CONTEXT VARIABLES
               const app = initializeApp(firebaseConfig);
               const firestore = getFirestore(app);
               const firebaseAuth = getAuth(app);
@@ -1034,13 +1036,12 @@ React.useEffect(() => {
               setDb(firestore);
               setAuth(firebaseAuth);
 
-              // Use projectId from your firebaseConfig as the appId for consistent paths in Firestore
+              // CRITICAL FIX: Sets the projectId for Firestore path construction
               setAppId(firebaseConfig.projectId);
 
+              // SIGN IN FUNCTION (Student anonymous sign-in)
               const signIn = async () => {
                 try {
-                  // For local/hosted environment, we don't have __initial_auth_token.
-                  // We sign in anonymously.
                   const userCredential = await signInAnonymously(firebaseAuth);
                   setUserId(userCredential.user.uid);
                 } catch (error) {
@@ -1048,8 +1049,11 @@ React.useEffect(() => {
                   showModal("An error occurred while signing in to Firebase. Please try again.", () => {});
                 }
               };
-              signIn();
 
+              // CALLS THE SIGN IN FUNCTION to start the session immediately
+              signIn(); 
+              
+              // This is the correct, remaining code for the auth state observer:
               const unsubscribeAuth = onAuthStateChanged(firebaseAuth, (user) => {
                 if (user) {
                   setUserId(user.uid);
@@ -1063,8 +1067,6 @@ React.useEffect(() => {
               console.error("Error initializing Firebase:", error);
               showModal("An error occurred while initializing Firebase. Please try again.", () => {});
             }
-          }, []);
-
 
           const contextValue = {
             db,
@@ -1099,4 +1101,5 @@ React.useEffect(() => {
 </body>
 
 </html>
+
 

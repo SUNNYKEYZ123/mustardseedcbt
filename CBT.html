@@ -1067,6 +1067,7 @@ React.useEffect(() => {
               console.error("Error initializing Firebase:", error);
               showModal("An error occurred while initializing Firebase. Please try again.", () => {});
             }
+    }, []);
 
           const contextValue = {
             db,
@@ -1101,5 +1102,6 @@ React.useEffect(() => {
 </body>
 
 </html>
+
 
 

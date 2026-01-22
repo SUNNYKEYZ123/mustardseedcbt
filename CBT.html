@@ -14,6 +14,172 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <!-- Firebase CDNs -->
     <div id="root"></div>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        
+        // Exporting to window so Babel script can see it
+        window.fb = {
+            db: getFirestore(app),
+            auth: getAuth(app),
+            collection, addDoc, getDocs, query, where, signInAnonymously
+        };
+    </script>
+
+    <script type="text/babel">
+        const { createClient } = window.supabase;
+        const SB_URL = 'https://jqrcoqslmylmubxwfgyt.supabase.co';
+        const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxcmNvcXNsbXlsbXVieHdmZ3l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2ODc2NzgsImV4cCI6MjA4MDI2MzY3OH0.4bXOY35R3eGYZjPxtuJzvwifPEfHXr5UEdzFbB-caKU';
+        const _supabase = createClient(SB_URL, SB_KEY);
+
+        const AppContext = React.createContext(null);
+
+        const StudentExamPage = () => {
+            const { appId, setPage } = React.useContext(AppContext);
+            const [msId, setMsId] = React.useState('');
+            const [student, setStudent] = React.useState(null);
+            const [questions, setQuestions] = React.useState([]);
+            const [index, setIndex] = React.useState(0);
+            const [answers, setAnswers] = React.useState({});
+            const [loading, setLoading] = React.useState(false);
+            const [finished, setFinished] = React.useState(false);
+            const [finalScore, setFinalScore] = React.useState(0);
+
+            // 1. Verify with Supabase
+            const verifyAndStart = async () => {
+                if (!msId.trim()) return alert("Enter MS-ID");
+                setLoading(true);
+                try {
+                    const { data, error } = await _supabase
+                        .from('students')
+                        .select('full_name, username')
+                        .eq('username', msId.toUpperCase().trim())
+                        .single();
+
+                    if (error || !data) {
+                        alert("ID not found in Mustard Seed database.");
+                    } else {
+                        setStudent(data);
+                        fetchQuestions();
+                    }
+                } catch (e) { alert("Check Connection"); }
+                setLoading(false);
+            };
+
+            // 2. Fetch Questions from Firebase
+            const fetchQuestions = async () => {
+                const qRef = fb.collection(fb.db, `artifacts/${appId}/public/data/questions`);
+                const snap = await fb.getDocs(qRef);
+                setQuestions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+            };
+
+            // 3. Submit to Firebase
+            const submitExam = async () => {
+                let score = 0;
+                questions.forEach((q, i) => { if(answers[i] === q.correctOptionIndex) score++; });
+                const pct = Math.round((score / questions.length) * 100);
+                
+                await fb.addDoc(fb.collection(fb.db, `artifacts/${appId}/scores`), {
+                    studentName: student.full_name,
+                    studentId: student.username,
+                    score: pct,
+                    timestamp: new Date()
+                });
+                setFinalScore(pct);
+                setFinished(true);
+            };
+
+            if (finished) return (
+                <div className="flex flex-col items-center justify-center min-h-screen text-center">
+                    <h1 className="text-4xl font-bold text-blue-600 mb-2">{finalScore}%</h1>
+                    <p className="text-gray-500 mb-6">Exam submitted successfully, {student.full_name}!</p>
+                    <button onClick={() => setPage('home')} className="bg-gray-800 text-white px-8 py-2 rounded-full">Exit</button>
+                </div>
+            );
+
+            if (!student) return (
+                <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                    <div className="bg-white p-8 rounded-2xl shadow-lg max-w-sm w-full">
+                        <h2 className="text-xl font-bold mb-4">Student Login</h2>
+                        <input className="w-full p-3 border rounded mb-4" placeholder="MS-ID" value={msId} onChange={e => setMsId(e.target.value)} />
+                        <button onClick={verifyAndStart} className="w-full py-3 bg-blue-600 text-white rounded font-bold">
+                            {loading ? "Verifying..." : "Enter Exam"}
+                        </button>
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="max-w-2xl mx-auto p-6">
+                    <div className="flex justify-between mb-8 text-sm font-bold text-gray-400 uppercase">
+                        <span>{student.full_name}</span>
+                        <span>Question {index + 1}/{questions.length}</span>
+                    </div>
+                    {questions.length > 0 && (
+                        <div className="bg-white p-6 rounded-xl shadow-sm border">
+                            <p className="text-xl mb-6">{questions[index].questionText}</p>
+                            {questions[index].options.map((opt, i) => (
+                                <button key={i} onClick={() => setAnswers({...answers, [index]: i})} 
+                                    className={`w-full p-4 mb-2 text-left rounded border ${answers[index] === i ? 'bg-blue-50 border-blue-500' : 'border-gray-100'}`}>
+                                    {opt}
+                                </button>
+                            ))}
+                            <div className="mt-8 flex justify-between">
+                                <button onClick={() => setIndex(i => i - 1)} disabled={index === 0}>Back</button>
+                                {index === questions.length - 1 ? 
+                                    <button onClick={submitExam} className="bg-green-600 text-white px-8 py-2 rounded">Finish</button> :
+                                    <button onClick={() => setIndex(i => i + 1)} className="bg-blue-600 text-white px-8 py-2 rounded">Next</button>
+                                }
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [page, setPage] = React.useState('home');
+            // Wait for the Firebase "Bridge" to be ready
+            const [ready, setReady] = React.useState(false);
+            
+            React.useEffect(() => {
+                const check = setInterval(() => {
+                    if (window.fb) { setReady(true); clearInterval(check); }
+                }, 100);
+            }, []);
+
+            if (!ready) return <div className="p-10 text-center text-gray-400">Loading System Assets...</div>;
+
+            return (
+                <AppContext.Provider value={{ appId: 'mustard-seed-cbt', setPage }}>
+                    {page === 'home' && (
+                        <div className="flex flex-col items-center justify-center min-h-screen">
+                            <h1 className="text-3xl font-black mb-6">MUSTARD SEED CBT</h1>
+                            <button onClick={() => setPage('exam')} className="bg-blue-600 text-white px-10 py-4 rounded-full font-bold shadow-lg">Start Exam</button>
+                        </div>
+                    )}
+                    {page === 'exam' && <StudentExamPage />}
+                </AppContext.Provider>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+
+    <div id="root"></div>
         // Admin Page Component
         const AdminPage = () => {
         const { db, appId, showModal, setCurrentPage, userId } = React.useContext(AppContext);
@@ -1114,3 +1280,4 @@ React.useEffect(() => {
 </body>
 
 </html>
+

@@ -3,17 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CBT Exam Application</title>
-    <!-- Tailwind CSS CDN -->
+    <title>Mustard Seed CBT</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- React and ReactDOM CDNs -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <!-- Babel CDN for JSX transformation in browser (NOT for production) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- Firebase CDNs -->
+</head>
+<body class="bg-gray-50">
     <div id="root"></div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -21,1350 +20,220 @@
 
         const firebaseConfig = {
             apiKey: "AIzaSyDOO3uHmzOuAxJcdLxu-OImzlH12A6FpeY",
-                authDomain: "my-project-a6208.firebaseapp.com",
-                projectId: "my-project-a6208",
-                storageBucket: "my-project-a6208.firebasestorage.app",
-                messagingSenderId: "784486701962",
-                appId: "1:784486701962:web:0d3cd002bbfd647e944673",
-                measurementId: "G-DDVFJ0ST1X"
+            authDomain: "my-project-a6208.firebaseapp.com",
+            projectId: "my-project-a6208",
+            storageBucket: "my-project-a6208.firebasestorage.app",
+            messagingSenderId: "784486701962",
+            appId: "1:784486701962:web:0d3cd002bbfd647e944673"
         };
 
         const app = initializeApp(firebaseConfig);
-        
-        // Exporting to window so Babel script can see it
         window.fb = {
             db: getFirestore(app),
             auth: getAuth(app),
-            collection, addDoc, getDocs, query, where, signInAnonymously
+            collection, addDoc, getDocs, doc, deleteDoc, onSnapshot, query, where, signInAnonymously, onAuthStateChanged
         };
     </script>
 
     <script type="text/babel">
-    const { createClient } = window.supabase;
-    const SB_URL = 'https://jqrcoqslmylmubxwfgyt.supabase.co';
-    const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxcmNvcXNsbXlsbXVieHdmZ3l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2ODc2NzgsImV4cCI6MjA4MDI2MzY3OH0.4bXOY35R3eGYZjPxtuJzvwifPEfHXr5UEdzFbB-caKU';
-    const _supabase = createClient(SB_URL, SB_KEY);
+        const { createClient } = window.supabase;
+        const SB_URL = 'https://jqrcoqslmylmubxwfgyt.supabase.co';
+        const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxcmNvcXNsbXlsbXVieHdmZ3l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2ODc2NzgsImV4cCI6MjA4MDI2MzY3OH0.4bXOY35R3eGYZjPxtuJzvwifPEfHXr5UEdzFbB-caKU';
+        const _supabase = createClient(SB_URL, SB_KEY);
 
-    const AppContext = React.createContext(null);
-    const ADMIN_PASSWORD = 'SUNNYKEYZ2025@';
-    const optionLetters = ['A', 'B', 'C', 'D'];
+        const AppContext = React.createContext(null);
+        const ADMIN_PASSWORD = 'SUNNYKEYZ2025@';
+        const optionLetters = ['A', 'B', 'C', 'D'];
 
-    // --- STUDENT EXAM PAGE ---
-    const StudentExamPage = () => {
-        const { appId, setPage } = React.useContext(AppContext);
-        const [msId, setMsId] = React.useState('');
-        const [student, setStudent] = React.useState(null);
-        const [questions, setQuestions] = React.useState([]);
-        const [index, setIndex] = React.useState(0);
-        const [answers, setAnswers] = React.useState({});
-        const [loading, setLoading] = React.useState(false);
-        const [finished, setFinished] = React.useState(false);
-        const [finalScore, setFinalScore] = React.useState(0);
-
-        const verifyAndStart = async () => {
-            if (!msId.trim()) return alert("Please enter your MS-ID");
-            setLoading(true);
-            const inputId = msId.toUpperCase().trim();
-
-            try {
-                const { data: students, error } = await _supabase
-                    .from('students')
-                    .select('id, full_name')
-                    .eq('status', 'Enrolled');
-
-                if (error) throw error;
-
-                const found = students.find(s => {
-                    const calculatedID = "MS-" + s.id.substring(0, 5).toUpperCase();
-                    return calculatedID === inputId;
-                });
-
-                if (found) {
-                    setStudent({ full_name: found.full_name, username: inputId });
-                    fetchQuestions();
-                } else {
-                    alert("Access Denied: ID not found.");
-                }
-            } catch (e) { alert("Connection Error"); }
-            setLoading(false);
-        };
-
-        const fetchQuestions = async () => {
-            const qRef = fb.collection(fb.db, `artifacts/${appId}/public/data/questions`);
-            const snap = await fb.getDocs(qRef);
-            const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            setQuestions(data);
-        };
-
-        const submitExam = async () => {
-            let score = 0;
-            questions.forEach((q, i) => { if(answers[index] === q.correctOptionIndex) score++; });
-            const pct = Math.round((score / questions.length) * 100);
-            
-            await fb.addDoc(fb.collection(fb.db, `artifacts/${appId}/scores`), {
-                studentName: student.full_name,
-                studentId: student.username,
-                score: pct,
-                timestamp: new Date()
-            });
-            setFinalScore(pct);
-            setFinished(true);
-        };
-
-        if (finished) return (
-            <div className="flex flex-col items-center justify-center min-h-screen text-center p-4">
-                <h1 className="text-5xl font-bold text-blue-600 mb-4">{finalScore}%</h1>
-                <p className="text-gray-600 mb-8">Well done, {student.full_name}!</p>
-                <button onClick={() => setPage('home')} className="bg-gray-900 text-white px-10 py-3 rounded-full">Exit</button>
-            </div>
-        );
-
-        if (!student) return (
-            <div className="flex items-center justify-center min-h-screen bg-gray-50">
-                <div className="bg-white p-8 rounded-2xl shadow-xl max-w-sm w-full">
-                    <h2 className="text-2xl font-bold mb-6">Student Login</h2>
-                    <input className="w-full p-4 border rounded-xl mb-4 uppercase" placeholder="MS-XXXXX" value={msId} onChange={e => setMsId(e.target.value)} />
-                    <button onClick={verifyAndStart} className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold">
-                        {loading ? "Verifying..." : "Enter Exam"}
-                    </button>
-                </div>
-            </div>
-        );
-
-        if (questions.length === 0) return <div className="p-20 text-center">Loading Questions...</div>;
-
-        return (
-            <div className="max-w-2xl mx-auto p-6 pt-12">
-                <div className="flex justify-between mb-8">
-                    <span className="font-bold text-gray-400 uppercase">{student.full_name}</span>
-                    <span className="font-bold text-blue-600">Q {index + 1} / {questions.length}</span>
-                </div>
-                <div className="bg-white p-8 rounded-2xl shadow-sm border">
-                    <p className="text-xl font-medium mb-8">{questions[index].questionText}</p>
-                    <div className="space-y-3">
-                        {questions[index].options.map((opt, i) => (
-                            <button key={i} onClick={() => setAnswers({...answers, [index]: i})} 
-                                className={`w-full p-5 text-left rounded-xl border-2 ${answers[index] === i ? 'bg-blue-50 border-blue-600' : 'border-gray-50'}`}>
-                                {optionLetters[i]}. {opt}
-                            </button>
-                        ))}
-                    </div>
-                    <div className="mt-10 flex justify-between">
-                        <button onClick={() => setIndex(i => i - 1)} disabled={index === 0}>Back</button>
-                        {index === questions.length - 1 ? 
-                            <button onClick={submitExam} className="bg-green-600 text-white px-10 py-3 rounded-xl">Finish</button> :
-                            <button onClick={() => setIndex(i => i + 1)} className="bg-blue-600 text-white px-10 py-3 rounded-xl">Next</button>
-                        }
-                    </div>
-                </div>
-            </div>
-        );
-    };
-<script type="text/babel">
-    // --- ADMIN PAGE ---
-    const AdminPage = () => {
-        const { appId, setPage } = React.useContext(AppContext);
-        const [auth, setAuth] = React.useState(false);
-        const [pass, setPass] = React.useState('');
-        const [scores, setScores] = React.useState([]);
-
-        React.useEffect(() => {
-            if (!auth) return;
-            const q = fb.query(fb.collection(fb.db, `artifacts/${appId}/scores`));
-            return fb.onSnapshot(q, (snap) => {
-                setScores(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-            });
-        }, [auth]);
-
-        if (!auth) return (
-            <div className="flex flex-col items-center justify-center min-h-screen">
-                <h2 className="text-xl font-bold mb-4">Admin Portal</h2>
-                <input type="password" placeholder="Password" className="p-3 border rounded mb-4" value={pass} onChange={e => setPass(e.target.value)} />
-                <button onClick={() => pass === ADMIN_PASSWORD ? setAuth(true) : alert("Wrong")} className="bg-gray-800 text-white px-8 py-2 rounded">Login</button>
-            </div>
-        );
-
-        return (
-            <div className="p-8 max-w-4xl mx-auto">
-                <div className="flex justify-between mb-8 items-center">
-                    <h1 className="text-2xl font-bold">Student Scores</h1>
-                    <button onClick={() => setPage('home')} className="bg-blue-600 text-white px-4 py-2 rounded">Home</button>
-                </div>
-                <div className="bg-white rounded-xl shadow overflow-hidden">
-                    <table className="w-full text-left">
-                        <thead className="bg-gray-50 border-b">
-                            <tr><th className="p-4">Name</th><th className="p-4">ID</th><th className="p-4">Score</th></tr>
-                        </thead>
-                        <tbody>
-                            {scores.map(s => (
-                                <tr key={s.id} className="border-b">
-                                    <td className="p-4">{s.studentName}</td>
-                                    <td className="p-4 font-mono">{s.studentId}</td>
-                                    <td className="p-4 font-bold">{s.score}%</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        );
-    };
-        </script>
-    <script type="text/babel">
-    // --- MAIN APP ---
-    const App = () => {
-        const [page, setPage] = React.useState('home');
-        const [ready, setReady] = React.useState(false);
-        
-        React.useEffect(() => {
-            const check = setInterval(() => {
-                if (window.fb) { setReady(true); clearInterval(check); }
-            }, 100);
-            return () => clearInterval(check);
-        }, []);
-
-        if (!ready) return <div className="p-10 text-center">Loading System...</div>;
-
-        return (
-            <AppContext.Provider value={{ appId: 'mustard-seed-cbt', setPage }}>
-                {page === 'home' && (
-                    <div className="flex flex-col items-center justify-center min-h-screen">
-                        <h1 className="text-4xl font-black mb-8">MUSTARD SEED CBT</h1>
-                        <div className="space-x-4">
-                            <button onClick={() => setPage('exam')} className="bg-blue-600 text-white px-10 py-4 rounded-full font-bold shadow-lg">Start Exam</button>
-                            <button onClick={() => setPage('admin')} className="bg-white text-gray-600 px-10 py-4 rounded-full font-bold border">Admin</button>
-                        </div>
-                    </div>
-                )}
-                {page === 'exam' && <StudentExamPage />}
-                {page === 'admin' && <AdminPage />}
-            </AppContext.Provider>
-        );
-    };
-
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
-</script>
-
-<div id="root"></div>
-
-    <div id="root"></div>
-</script>
-    <script type="text/babel">
-        // Admin Page Component
+        // --- ADMIN PAGE ---
         const AdminPage = () => {
-        const { db, appId, showModal, setCurrentPage, userId } = React.useContext(AppContext);
-          const [adminPasswordInput, setAdminPasswordInput] = React.useState('');
-          const [isAdminAuthenticated, setIsAdminAuthenticated] = React.useState(false);
+            const { setPage } = React.useContext(AppContext);
+            const [auth, setAuth] = React.useState(false);
+            const [pass, setPass] = React.useState('');
+            const [scores, setScores] = React.useState([]);
+            const [questions, setQuestions] = React.useState([]);
+            const [newQ, setNewQ] = React.useState({ text: '', options: ['', '', '', ''], correct: 0 });
 
-          const [questionText, setQuestionText] = React.useState('');
-          const [options, setOptions] = React.useState(['', '', '', '']);
-          const [correctOptionIndex, setCorrectOptionIndex] = React.useState(0);
-          const [questions, setQuestions] = React.useState([]);
-          const [loading, setLoading] = React.useState(true);
-          const [bulkQuestionInput, setBulkQuestionInput] = React.useState('');
-          const [aiQuestionTopic, setAiQuestionTopic] = React.useState('');
-          const [isGeneratingAiQuestions, setIsGeneratingAiQuestions] = React.useState(false);
-          const [studentScores, setStudentScores] = React.useState([]);
-          const [loadingScores, setLoadingScores] = React.useState(true);
+            React.useEffect(() => {
+                if (!auth) return;
+                const qScores = fb.query(fb.collection(fb.db, "scores"));
+                const qQuest = fb.query(fb.collection(fb.db, "questions"));
+                
+                const unsub1 = fb.onSnapshot(qScores, (s) => setScores(s.docs.map(d => ({id: d.id, ...d.data()}))));
+                const unsub2 = fb.onSnapshot(qQuest, (s) => setQuestions(s.docs.map(d => ({id: d.id, ...d.data()}))));
+                return () => { unsub1(); unsub2(); };
+            }, [auth]);
 
-            </script>
-    <script type="text/babel">
-          // Authenticate admin
-          const handleAdminLogin = () => {
-            if (adminPasswordInput === ADMIN_PASSWORD) {
-              setIsAdminAuthenticated(true);
-              setAdminPasswordInput('');
-            } else {
-              showModal("Incorrect password. Please try again.", () => {});
-            }
-          };
-    </script>
-    <script type="text/babel">
-    // Fetch questions from Firestore in real-time
-          // Fetch questions from Firestore in real-time
-          React.useEffect(() => {
-            if (!db || !appId || !isAdminAuthenticated) return;
-
-            const questionsCollectionRef = collection(db, `artifacts/${appId}/public/data/questions`);
-            const unsubscribe = onSnapshot(questionsCollectionRef, (snapshot) => {
-              const fetchedQuestions = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-              }));
-              setQuestions(fetchedQuestions);
-              setLoading(false);
-            }, (error) => {
-              console.error("Error fetching questions:", error);
-              showModal("An error occurred while fetching questions. Please try again.", () => {});
-              setLoading(false);
-            });
-
-            return () => unsubscribe();
-          }, [db, appId, isAdminAuthenticated, showModal]);
-</script>
-         <script type="text/babel">
-             // Assume 'userId' is available from your AppContext.
-// Fetch all student scores
-React.useEffect(() => {
-    // 1. Initial check for core dependencies.
-    if (!db || !appId) return; 
-
-    const fetchAllStudentScores = async () => {
-        
-        // 🛑 FIX: The essential Guard Clause 🛑
-        // Stops the fetch from running until the Admin's UID is successfully loaded.
-        if (!userId || userId === 'loading...') { 
-            console.log("Admin UID not ready. Skipping score fetch.");
-            setStudentScores([]); 
-            setLoadingScores(false);
-            return;
-        }
-
-        setLoadingScores(true);
-        const allScores = [];
-        
-        try {
-            // ✅ FIX: Directly query the correct collection (Admin's UID)
-            // This is ONE quick database read, not a slow, error-prone loop.
-            const examsCollectionRef = collection(db, `artifacts/${appId}/scores`);
-            
-            const examsSnapshot = await getDocs(examsCollectionRef);
-
-            examsSnapshot.docs.forEach(examDoc => {
-                allScores.push({
-                    id: examDoc.id,
-                    firebaseUid: userId,
-                    ...examDoc.data()
+            const addQuestion = async () => {
+                await fb.addDoc(fb.collection(fb.db, "questions"), {
+                    questionText: newQ.text,
+                    options: newQ.options,
+                    correctOptionIndex: parseInt(newQ.correct)
                 });
-            });
+                setNewQ({ text: '', options: ['', '', '', ''], correct: 0 });
+                alert("Question Added!");
+            };
 
-            allScores.sort((a, b) => (b.examDate?.seconds || 0) - (a.examDate?.seconds || 0));
-            setStudentScores(allScores);
+            const deleteQuestion = async (id) => {
+                await fb.deleteDoc(fb.doc(fb.db, "questions", id));
+            };
 
-        } catch (error) {
-            console.error("Error fetching all student scores:", error);
-            showModal("An error occurred while fetching student scores. Please ensure your Firebase rules allow admin read access.", () => {});
-        } finally {
-            setLoadingScores(false);
-        }
-    };
-
-    fetchAllStudentScores();
-    </script>
-    <script type="text/babel">
-    // ✅ FIX: The hook now depends on the specific 'userId' variable
-}, [db, appId, userId, showModal]);
-
-          // Handle adding a new question
-          const handleAddQuestion = async () => {
-            if (!questionText.trim() || options.some(opt => !opt.trim())) {
-              showModal("Please fill in all question and option fields.", () => {});
-              return;
-            }
-
-            try {
-              const questionsCollectionRef = collection(db, `artifacts/${appId}/public/data/questions`);
-              await addDoc(questionsCollectionRef, {
-                questionText: questionText.trim(),
-                options: options.map(opt => opt.trim()),
-                correctOptionIndex: parseInt(correctOptionIndex),
-                createdAt: new Date()
-              });
-              setQuestionText('');
-              setOptions(['', '', '', '']);
-              setCorrectOptionIndex(0);
-              showModal("Question added successfully!", () => {});
-            } catch (e) {
-              console.error("Error adding document: ", e);
-              showModal("An error occurred while adding the question. Please try again.", () => {});
-            }
-          };
-    </script>
-    <script type="text/babel">
-          // Handle deleting a question
-          const handleDeleteQuestion = async (id) => {
-            showModal("Are you sure you want to delete this question?", async () => {
-              try {
-                const questionDocRef = doc(db, `artifacts/${appId}/public/data/questions`, id);
-                await deleteDoc(questionDocRef);
-                showModal("Question deleted successfully!", () => {});
-              } catch (e) {
-                console.error("Error deleting document: ", e);
-                showModal("An error occurred while deleting the question. Please try again.", () => {});
-              }
-            }, true);
-          };
-    </script>
-    <script type="text/babel">
-          // Handle option change for single question add
-          const handleOptionChange = (index, value) => {
-            const newOptions = [...options];
-            newOptions[index] = value;
-            setOptions(newOptions);
-          };
-    </script>
-    <script type="text/babel">
-          // Parse bulk questions from pasted text
-          const parseBulkQuestions = (text) => {
-            const questionBlocks = text.split(/\n\s*\n/).filter(block => block.trim() !== '');
-            const parsedQuestions = [];
-            let errors = [];
-
-            questionBlocks.forEach((block, blockIndex) => {
-              const lines = block.split('\n').map(line => line.trim()).filter(line => line !== '');
-              if (lines.length < 6) {
-                errors.push(`Block ${blockIndex + 1}: Insufficient lines. Expected at least 6, got ${lines.length}.`);
-                return;
-              }
-
-              const questionText = lines[0];
-              const currentOptions = [];
-              let correctIndex = -1;
-
-              for (let i = 1; i <= 4; i++) {
-                const optionLine = lines[i];
-                const match = optionLine.match(/^([A-D])\.\s*(.*)/);
-                if (match) {
-                  currentOptions.push(match[2]);
-                } else {
-                  errors.push(`Block ${blockIndex + 1}: Option ${optionLetters[i-1]} format incorrect: "${optionLine}"`);
-                  return;
-                }
-              }
-
-              const correctLine = lines[5];
-              const correctMatch = correctLine.match(/^Correct:\s*([A-D])/i);
-              if (correctMatch) {
-                correctIndex = optionLetters.indexOf(correctMatch[1].toUpperCase());
-                if (correctIndex === -1) {
-                  errors.push(`Block ${blockIndex + 1}: Invalid correct option letter: "${correctMatch[1]}". Must be A, B, C, or D.`);
-                  return;
-                }
-              } else {
-                errors.push(`Block ${blockIndex + 1}: Correct answer line format incorrect: "${correctLine}"`);
-                return;
-              }
-
-              if (currentOptions.length === 4 && correctIndex !== -1) {
-                parsedQuestions.push({
-                  questionText,
-                  options: currentOptions,
-                  correctOptionIndex: correctIndex,
-                  createdAt: new Date()
-                });
-              } else {
-                errors.push(`Block ${blockIndex + 1}: Failed to parse all parts correctly.`);
-              }
-            });
-
-            return { parsedQuestions, errors };
-          };
-    </script>
-    <script type="text/babel">
-          // Handle bulk adding questions
-          const handleBulkAddQuestions = async () => {
-            if (!bulkQuestionInput.trim()) {
-              showModal("Please paste questions into the text area.", () => {});
-              return;
-            }
-
-            const { parsedQuestions, errors } = parseBulkQuestions(bulkQuestionInput);
-
-            if (errors.length > 0) {
-              showModal(`Errors found in bulk input:\n${errors.join('\n')}`, () => {});
-              return;
-            }
-            if (parsedQuestions.length === 0) {
-              showModal("No valid questions found in the pasted text. Please check the format.", () => {});
-              return;
-            }
-
-            showModal(`Are you sure you want to add ${parsedQuestions.length} questions?`, async () => {
-              try {
-                const questionsCollectionRef = collection(db, `artifacts/${appId}/public/data/questions`);
-                const addPromises = parsedQuestions.map(q => addDoc(questionsCollectionRef, q));
-                await Promise.all(addPromises);
-                setBulkQuestionInput('');
-                showModal(`${parsedQuestions.length} questions added successfully!`, () => {});
-              } catch (e) {
-                console.error("Error adding bulk documents: ", e);
-                showModal("An error occurred while adding bulk questions. Please try again.", () => {});
-              }
-            }, true);
-          };
-    </script>
-    <script type="text/babel">
-          // Handle AI question generation
-          const handleGenerateAiQuestions = async () => {
-            if (!aiQuestionTopic.trim()) {
-              showModal("Please enter a topic for AI question generation.", () => {});
-              return;
-            }
-
-            setIsGeneratingAiQuestions(true);
-            setBulkQuestionInput('');
-
-            try {
-              const prompt = `Generate 3 multiple-choice questions about "${aiQuestionTopic}". Each question must have exactly 4 options (A, B, C, D) and specify the correct option letter. Provide the output as a JSON array of objects, where each object has 'questionText' (string), 'options' (array of 4 strings), and 'correctOptionLetter' (string: 'A', 'B', 'C', or 'D').`;
-
-              let chatHistory = [];
-              chatHistory.push({ role: "user", parts: [{ text: prompt }] });
-              const payload = {
-                contents: chatHistory,
-                generationConfig: {
-                  responseMimeType: "application/json",
-                  responseSchema: {
-                    type: "ARRAY",
-                    items: {
-                      type: "OBJECT",
-                      properties: {
-                        "questionText": { "type": "STRING" },
-                        "options": {
-                          "type": "ARRAY",
-                          "items": { "type": "STRING" },
-                          "minItems": 4,
-                          "maxItems": 4
-                        },
-                        "correctOptionLetter": { "type": "STRING", "enum": ["A", "B", "C", "D"] }
-                      },
-                      "required": ["questionText", "options", "correctOptionLetter"]
-                    }
-                  }
-                }
-              };
-
-              const apiKey = "";
-              const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
-              const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-              });
-
-              const result = await response.json();
-
-              if (result.candidates && result.candidates.length > 0 &&
-                  result.candidates[0].content && result.candidates[0].content.parts &&
-                  result.candidates[0].content.parts.length > 0) {
-                const jsonString = result.candidates[0].content.parts[0].text;
-                const generatedQuestions = JSON.parse(jsonString);
-
-                let formattedText = '';
-                generatedQuestions.forEach(q => {
-                  formattedText += `${q.questionText}\n`;
-                  q.options.forEach((opt, idx) => {
-                    formattedText += `${optionLetters[idx]}. ${opt}\n`;
-                  });
-                  formattedText += `Correct: ${q.correctOptionLetter}\n\n`;
-                });
-                setBulkQuestionInput(formattedText);
-                showModal("AI questions generated! Review them in the 'Bulk Upload Questions' section and click 'Upload Questions' to add them.", () => {});
-
-              } else {
-                showModal("Failed to generate questions from AI. Please try a different topic or try again.", () => {});
-              }
-
-            } catch (error) {
-              console.error("Error generating AI questions:", error);
-              showModal("An error occurred during AI question generation. Please check your network or try again.", () => {});
-            } finally {
-              setIsGeneratingAiQuestions(false);
-            }
-          };
-
-
-          if (!isAdminAuthenticated) {
-            return (
-              <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 p-4">
-                <div className="bg-white p-8 rounded-xl shadow-2xl text-center max-w-md w-full border border-purple-200">
-                  <h2 className="text-3xl font-extrabold text-gray-800 mb-6">Admin Login</h2>
-                  <p className="text-gray-600 mb-6">Enter the admin password to proceed.</p>
-                  <input
-                    type="password"
-                    className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-purple-400 focus:border-transparent transition duration-200 ease-in-out"
-                    value={adminPasswordInput}
-                    onChange={(e) => setAdminPasswordInput(e.target.value)}
-                    placeholder="Enter admin password"
-                  />
-                  <button
-                    onClick={handleAdminLogin}
-                    className="w-full px-6 py-3 bg-purple-600 text-white text-lg font-semibold rounded-lg shadow-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-75 transition duration-300 ease-in-out transform hover:scale-105"
-                  >
-                    Login
-                  </button>
+            if (!auth) return (
+                <div className="flex flex-col items-center justify-center min-h-screen">
+                    <div className="bg-white p-8 rounded-xl shadow-lg border">
+                        <h2 className="text-xl font-bold mb-4">Admin Access</h2>
+                        <input type="password" placeholder="Password" className="w-full p-3 border rounded mb-4" onChange={e => setPass(e.target.value)} />
+                        <button onClick={() => pass === ADMIN_PASSWORD ? setAuth(true) : alert("Wrong")} className="w-full bg-black text-white py-3 rounded">Login</button>
+                    </div>
                 </div>
-              </div>
             );
-          }
 
-          return (
-            <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 p-4 sm:p-6 lg:p-8">
-              <div className="max-w-4xl mx-auto bg-white p-6 sm:p-8 rounded-xl shadow-2xl border border-purple-200">
-                <div className="flex justify-between items-center mb-8">
-                  <h2 className="text-3xl font-extrabold text-gray-800 text-center flex-grow">
-                    Admin Panel - Add/Manage Questions & Scores
-                  </h2>
-                  <button
-                    onClick={() => setCurrentPage('home')}
-                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-75 transition duration-200 ease-in-out text-sm"
-                  >
-                    Back to Home
-                  </button>
-                </div>
-
-                {/* Add Single Question Form */}
-                <div className="mb-12 p-6 bg-gray-50 rounded-xl shadow-inner border border-gray-200">
-                  <h3 className="text-2xl font-bold text-gray-700 mb-6">Add New Question</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label htmlFor="questionText" className="block text-gray-700 text-sm font-semibold mb-2">
-                        Question Text:
-                      </label>
-                      <textarea
-                        id="questionText"
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-400 focus:border-transparent transition duration-200 ease-in-out resize-y min-h-[80px]"
-                        value={questionText}
-                        onChange={(e) => setQuestionText(e.target.value)}
-                        placeholder="Enter your question here..."
-                      ></textarea>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {options.map((option, index) => (
-                        <div key={index}>
-                          <label htmlFor={`option-${index}`} className="block text-gray-700 text-sm font-semibold mb-2">
-                            Option {optionLetters[index]}:
-                          </label>
-                          <input
-                            type="text"
-                            id={`option-${index}`}
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-400 focus:border-transparent transition duration-200 ease-in-out"
-                            value={option}
-                            onChange={(e) => handleOptionChange(index, e.target.value)}
-                            placeholder={`Enter option ${optionLetters[index]}`}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    <div>
-                      <label htmlFor="correctOption" className="block text-gray-700 text-sm font-semibold mb-2">
-                        Correct Option:
-                      </label>
-                      <select
-                        id="correctOption"
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-400 focus:border-transparent transition duration-200 ease-in-out bg-white"
-                        value={correctOptionIndex}
-                        onChange={(e) => setCorrectOptionIndex(e.target.value)}
-                      >
-                        {options.map((_, index) => (
-                          <option key={index} value={index}>
-                            Option {optionLetters[index]}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <button
-                      onClick={handleAddQuestion}
-                      className="w-full px-6 py-3 bg-purple-600 text-white text-lg font-semibold rounded-lg shadow-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-75 transition duration-300 ease-in-out transform hover:scale-105"
-                    >
-                      Add Question
-                    </button>
-                  </div>
-                </div>
-
-                {/* AI Question Generation Section ✨ */}
-                <div className="mb-12 p-6 bg-blue-50 rounded-xl shadow-inner border border-blue-200">
-                  <h3 className="text-2xl font-bold text-gray-700 mb-6">Generate Questions with AI ✨</h3>
-                  <p className="text-gray-600 mb-4 text-sm">
-                    Enter a topic, and AI will generate multiple-choice questions for you.
-                  </p>
-                  <input
-                    type="text"
-                    className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition duration-200 ease-in-out"
-                    value={aiQuestionTopic}
-                    onChange={(e) => setAiQuestionTopic(e.target.value)}
-                    placeholder="e.g., 'History of Nigeria', 'Basic Algebra'"
-                  />
-                  <button
-                    onClick={handleGenerateAiQuestions}
-                    disabled={isGeneratingAiQuestions}
-                    className={`w-full px-6 py-3 text-white text-lg font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out transform hover:scale-105
-                      ${isGeneratingAiQuestions ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
-                  >
-                    {isGeneratingAiQuestions ? 'Generating...' : 'Generate Questions'}
-                  </button>
-                  {isGeneratingAiQuestions && (
-                    <p className="text-center text-blue-600 mt-4">AI is working, please wait...</p>
-                  )}
-                </div>
-
-
-                {/* Bulk Upload Section */}
-                <div className="mb-12 p-6 bg-gray-50 rounded-xl shadow-inner border border-gray-200">
-                  <h3 className="text-2xl font-bold text-gray-700 mb-6">Bulk Upload Questions</h3>
-                  <div className="text-gray-600 mb-4 text-sm">
-                    Paste multiple questions here. Use the format:
-                    <pre className="bg-gray-100 p-3 rounded-md mt-2 text-xs overflow-auto">
-                      Question text?<br/>
-                      A. Option A<br/>
-                      B. Option B<br/>
-                      C. Option C<br/>
-                      D. Option D<br/>
-                      Correct: B<br/>
-                      <br/>
-                      Question text 2?<br/>
-                      A. Option A for Q2<br/>
-                      ...
-                    </pre>
-                  </div>
-                  <textarea
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-400 focus:border-transparent transition duration-200 ease-in-out resize-y min-h-[150px]"
-                    value={bulkQuestionInput}
-                    onChange={(e) => setBulkQuestionInput(e.target.value)}
-                    placeholder="Paste your questions here in the specified format..."
-                  ></textarea>
-                  <button
-                    onClick={handleBulkAddQuestions}
-                    className="w-full mt-4 px-6 py-3 bg-indigo-600 text-white text-lg font-semibold rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-75 transition duration-300 ease-in-out transform hover:scale-105"
-                  >
-                    Upload Questions
-                  </button>
-                </div>
-
-
-                {/* Existing Questions List */}
-                <div className="p-6 bg-white rounded-xl shadow-inner border border-gray-200">
-                  <h3 className="text-2xl font-bold text-gray-700 mb-6">Existing Questions</h3>
-                  {loading ? (
-                    <p className="text-center text-gray-500">Loading questions...</p>
-                  ) : questions.length === 0 ? (
-                    <p className="text-center text-gray-500">No questions added yet.</p>
-                  ) : (
-                    <ul className="space-y-6">
-                      {questions.map((q) => (
-                        <li key={q.id} className="p-4 bg-purple-50 rounded-lg shadow-sm border border-purple-100">
-                          <p className="font-semibold text-gray-800 mb-2">{q.questionText}</p>
-                          <ul className="list-disc list-inside text-gray-700 mb-3">
-                            {q.options.map((opt, idx) => (
-                              <li key={idx} className={idx === q.correctOptionIndex ? 'font-bold text-green-700' : ''}>
-                                {optionLetters[idx]}. {opt} {idx === q.correctOptionIndex && '(Correct)'}
-                              </li>
+            return (
+                <div className="p-8 max-w-4xl mx-auto space-y-12">
+                    <button onClick={() => setPage('home')} className="text-blue-600 font-bold">← Back Home</button>
+                    
+                    <section className="bg-white p-6 rounded-xl shadow border">
+                        <h2 className="text-xl font-bold mb-4">Add Question</h2>
+                        <textarea className="w-full p-3 border rounded mb-4" placeholder="Question Text" value={newQ.text} onChange={e => setNewQ({...newQ, text: e.target.value})} />
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                            {newQ.options.map((o, i) => (
+                                <input key={i} className="p-2 border rounded" placeholder={`Option ${optionLetters[i]}`} value={o} 
+                                onChange={e => { let n = [...newQ.options]; n[i] = e.target.value; setNewQ({...newQ, options: n}) }} />
                             ))}
-                          </ul>
-                          <button
-                            onClick={() => handleDeleteQuestion(q.id)}
-                            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-opacity-75 transition duration-200 ease-in-out text-sm"
-                          >
-                            Delete
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
+                        </div>
+                        <select className="w-full p-3 border rounded mb-4" onChange={e => setNewQ({...newQ, correct: e.target.value})}>
+                            {optionLetters.map((l, i) => <option key={i} value={i}>Correct: {l}</option>)}
+                        </select>
+                        <button onClick={addQuestion} className="w-full bg-green-600 text-white py-3 rounded font-bold">Save Question</button>
+                    </section>
 
-                {/* Student Scores Dashboard Section */}
-                <div className="mt-12 p-6 bg-green-50 rounded-xl shadow-inner border border-green-200">
-                  <h3 className="text-2xl font-bold text-gray-700 mb-6">Student Exam Scores</h3>
-                  {loadingScores ? (
-                    <p className="text-center text-gray-500">Loading student scores...</p>
-                  ) : studentScores.length === 0 ? (
-                    <p className="text-center text-gray-500">No student exam scores found yet.</p>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full bg-white rounded-lg shadow-md">
-                        <thead>
-                          <tr className="bg-green-100 text-gray-700 uppercase text-sm leading-normal">
-                            <th className="py-3 px-6 text-left">Student Name</th>
-                            <th className="py-3 px-6 text-left">Student ID</th>
-                            <th className="py-3 px-6 text-left">Score</th>
-                            <th className="py-3 px-6 text-left">Total Questions</th>
-                            <th className="py-3 px-6 text-left">Date</th>
-                          </tr>
-                        </thead>
-                        <tbody className="text-gray-600 text-sm font-light">
-                          {studentScores.map((score, index) => (
-                            <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
-                              <td className="py-3 px-6 text-left whitespace-nowrap">{score.studentName}</td>
-                              <td className="py-3 px-6 text-left">{score.studentId}</td>
-                              <td className="py-3 px-6 text-left font-medium">{score.score}</td>
-                              <td className="py-3 px-6 text-left">{score.totalQuestions}</td>
-                              <td className="py-3 px-6 text-left">
-                                {score.examDate ? new Date(score.examDate.seconds * 1000).toLocaleString() : 'N/A'}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
+                    <section className="bg-white p-6 rounded-xl shadow border">
+                        <h2 className="text-xl font-bold mb-4">Recent Scores</h2>
+                        <table className="w-full text-left">
+                            <tr className="border-b text-gray-400"><th>Student</th><th>ID</th><th>Score</th></tr>
+                            {scores.map(s => (
+                                <tr key={s.id} className="border-b"><td className="py-2">{s.studentName}</td><td>{s.studentId}</td><td className="font-bold text-green-600">{s.score}%</td></tr>
+                            ))}
+                        </table>
+                    </section>
                 </div>
-              </div>
-            </div>
-          );
+            );
         };
 
-        // Student Exam Page Component
-const StudentExamPage = () => {
-    const { db, appId, showModal, setCurrentPage, userId } = React.useContext(AppContext);
-    const [studentIdInput, setStudentIdInput] = React.useState(''); // This is where they type MS-XXXX
-    const [studentNameInput, setStudentNameInput] = React.useState(''); 
-    const [currentStudentId, setCurrentStudentId] = React.useState('');
-    const [currentStudentName, setCurrentStudentName] = React.useState('');
+        // --- STUDENT EXAM PAGE ---
+        const StudentExamPage = () => {
+            const { setPage } = React.useContext(AppContext);
+            const [msId, setMsId] = React.useState('');
+            const [student, setStudent] = React.useState(null);
+            const [questions, setQuestions] = React.useState([]);
+            const [index, setIndex] = React.useState(0);
+            const [answers, setAnswers] = React.useState({});
+            const [loading, setLoading] = React.useState(false);
+            const [finished, setFinished] = React.useState(false);
+            const [finalScore, setFinalScore] = React.useState(0);
 
-    const [questions, setQuestions] = React.useState([]);
-    const [currentQuestionIndex, setCurrentQuestionIndex] = React.useState(0);
-    const [selectedAnswers, setSelectedAnswers] = React.useState({});
-    const [examSubmitted, setExamSubmitted] = React.useState(false);
-    const [score, setScore] = React.useState(0);
-    const [loadingQuestions, setLoadingQuestions] = React.useState(true);
-    const [isVerifying, setIsVerifying] = React.useState(false);
+            const verifyId = async () => {
+                setLoading(true);
+                const inputId = msId.toUpperCase().trim();
+                const { data, error } = await _supabase.from('students').select('*').eq('status', 'Enrolled');
+                
+                const found = data?.find(s => ("MS-" + s.id.substring(0, 5).toUpperCase()) === inputId);
+                if (found) {
+                    setStudent({ name: found.full_name, id: inputId });
+                    const snap = await fb.getDocs(fb.collection(fb.db, "questions"));
+                    setQuestions(snap.docs.map(d => ({id: d.id, ...d.data()})));
+                } else { alert("ID Not Found"); }
+                setLoading(false);
+            };
 
-    // --- NEW: VERIFY MS-ID WITH SUPABASE ---
-    const handleStartExam = async () => {
-        if (!studentIdInput.trim()) {
-            showModal("Please enter your Admission Number (MS-ID).");
-            return;
-        }
-
-        setIsVerifying(true);
-        try {
-    const verifyAndStart = async () => {
-        if (!msId.trim()) return alert("Please enter your MS-ID");
-        setLoading(true);
-        
-        const inputId = msId.toUpperCase().trim();
-        // ... the rest of your new code ...
-    };
-            if (error || !data) {
-                showModal("Access Denied: Invalid ID. Please use the MS-ID from your profile.");
-                setIsVerifying(false);
-                return;
-            }
-
-            // If ID is valid, set the names and load questions
-            setCurrentStudentId(data.username);
-            setCurrentStudentName(data.full_name);
-            fetchQuestions();
-        } catch (err) {
-            showModal("Connection error. Check your internet.");
-            setIsVerifying(false);
-        }
-    };
-
-    const fetchQuestions = async () => {
-        setLoadingQuestions(true);
-        const qRef = collection(db, `artifacts/${appId}/public/data/questions`);
-        const snapshot = await getDocs(qRef);
-        setQuestions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        setLoadingQuestions(false);
-    };
-
-    const handleFinish = async () => {
-        let finalScore = 0;
-        questions.forEach((q, idx) => {
-            if (selectedAnswers[idx] === q.correctOptionIndex) finalScore++;
-        });
-        const pct = Math.round((finalScore / questions.length) * 100);
-        setScore(pct);
-
-        // Save result to Firebase with Supabase info
-        await addDoc(collection(db, `artifacts/${appId}/scores`), {
-            studentName: currentStudentName,
-            admissionNo: currentStudentId,
-            score: pct,
-            examDate: new Date()
-        });
-        setExamSubmitted(true);
-    };
-
-    // --- UI GATE ---
-    if (!currentStudentId) {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-gray-50">
-                <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full border">
-                    <h2 className="text-2xl font-bold mb-6 text-blue-800">CBT Admission</h2>
-                    <label className="block text-sm font-bold mb-2 text-gray-600">Enter Admission Number:</label>
-                    <input 
-                        type="text" 
-                        placeholder="MS-XXXX"
-                        className="w-full p-4 border rounded-lg mb-4 text-xl font-mono uppercase"
-                        value={studentIdInput}
-                        onChange={(e) => setStudentIdInput(e.target.value)}
-                    />
-                    <button 
-                        onClick={handleStartExam}
-                        disabled={isVerifying}
-                        className="w-full py-4 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700"
-                    >
-                        {isVerifying ? "Verifying..." : "Start Examination"}
-                    </button>
-                    <button onClick={() => setCurrentPage('home')} className="w-full mt-4 text-gray-400">Back</button>
-                </div>
-            </div>
-        );
-    }
-
-    // --- EXAM RESULTS UI ---
-    if (examSubmitted) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-screen">
-                <h2 className="text-3xl font-bold">Exam Completed!</h2>
-                <p className="text-xl mt-2">{currentStudentName}</p>
-                <div className="text-6xl font-bold text-blue-600 mt-4">{score}%</div>
-                <button onClick={() => setCurrentPage('home')} className="mt-8 px-6 py-2 bg-gray-800 text-white rounded">Home</button>
-            </div>
-        );
-    }
-
-    // --- QUESTION UI ---
-    return (
-        <div className="p-4 max-w-2xl mx-auto">
-            <div className="mb-4 flex justify-between font-bold text-gray-500">
-                <span>{currentStudentName}</span>
-                <span>Question {currentQuestionIndex + 1}/{questions.length}</span>
-            </div>
-            {loadingQuestions ? <p>Loading...</p> : (
-                <div className="bg-white p-6 rounded shadow border">
-                    <p className="text-lg font-semibold mb-6">{questions[currentQuestionIndex]?.questionText}</p>
-                    {questions[currentQuestionIndex]?.options.map((opt, idx) => (
-                        <button 
-                            key={idx}
-                            onClick={() => setSelectedAnswers({...selectedAnswers, [currentQuestionIndex]: idx})}
-                            className={`w-full p-4 mb-2 text-left border rounded ${selectedAnswers[currentQuestionIndex] === idx ? 'bg-blue-100 border-blue-500' : ''}`}
-                        >
-                            {opt}
-                        </button>
-                    ))}
-                    <div className="mt-6 flex justify-between">
-                        <button disabled={currentQuestionIndex === 0} onClick={() => setCurrentQuestionIndex(prev => prev - 1)}>Back</button>
-                        {currentQuestionIndex === questions.length - 1 ? 
-                            <button onClick={handleFinish} className="bg-green-600 text-white px-6 py-2 rounded">Submit</button> :
-                            <button onClick={() => setCurrentQuestionIndex(prev => prev + 1)} className="bg-blue-600 text-white px-6 py-2 rounded">Next</button>
-                        }
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-};
-
-          // Fetch questions from Firestore in real-time
-          React.useEffect(() => {
-            if (!db || !appId) return;
-
-            const questionsCollectionRef = collection(db, `artifacts/${appId}/public/data/questions`);
-            const unsubscribe = onSnapshot(questionsCollectionRef, (snapshot) => {
-              const fetchedQuestions = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-              }));
-              const shuffledQuestions = fetchedQuestions.sort(() => Math.random() - 0.5);
-              setQuestions(shuffledQuestions);
-              setLoadingQuestions(false);
-            }, (error) => {
-              console.error("Error fetching questions for exam:", error);
-              showModal("An error occurred while fetching exam questions.", () => {});
-              setLoadingQuestions(false);
-            });
-
-            return () => unsubscribe();
-          }, [db, appId, showModal]);
-
-          // Handle student ID and Name submission
-          const handleStudentLogin = async () => {
-            if (!studentIdInput.trim() || !studentNameInput.trim()) {
-              showModal("Please enter both your Student ID and Name to start the exam.", () => {});
-              return;
-            }
-            if (!userId || userId === 'loading...') {
-              showModal("Firebase authentication not ready. Please wait a moment and try again.", () => {});
-              return;
-            }
-
-            try {
-              const scoresCollectionRef = collection(db, `artifacts/${appId}/scores`);
-              const q = query(scoresCollectionRef, where('studentId', '==', studentIdInput.trim()));
-              const querySnapshot = await getDocs(q);
-
-              if (!querySnapshot.empty) {
-                setExamAlreadyTaken(true);
-                showModal("You have already completed an exam with this ID. You cannot retake the exam.", () => {});
-                return;
-              }
-            } catch (e) {
-              console.error("Error checking for previous exams:", e);
-              showModal("An error occurred while checking for previous exams. Please try again.", () => {});
-              return;
-            }
-
-            setCurrentStudentId(studentIdInput.trim());
-            setCurrentStudentName(studentNameInput.trim());
-            setExamSubmitted(false);
-            setSelectedAnswers({});
-            setScore(0);
-            setCurrentQuestionIndex(0);
-            setExamAlreadyTaken(false);
-          };
-
-          // Handle selecting an answer option
-          const handleOptionSelect = (questionId, optionIndex) => {
-            setSelectedAnswers(prev => ({
-              ...prev,
-              [questionId]: optionIndex
-            }));
-          };
-
-          // Navigate to the next question
-          const handleNextQuestion = () => {
-            if (currentQuestionIndex < questions.length - 1) {
-              setCurrentQuestionIndex(prev => prev + 1);
-            }
-          };
-
-          // Navigate to the previous question
-          const handlePreviousQuestion = () => {
-            if (currentQuestionIndex > 0) {
-              setCurrentQuestionIndex(prev => prev - 1);
-            }
-          };
-          // Submit the exam
-          const handleSubmitExam = async () => {
-            showModal("Are you sure you want to submit this exam? You cannot retake it once submitted.", async () => {
-              let correctCount = 0;
-              questions.forEach(q => {
-                if (selectedAnswers[q.id] === q.correctOptionIndex) {
-                  correctCount++;
-                }
-              });
-              setScore(correctCount);
-              try {
-                if (!currentStudentId || !currentStudentName || !userId) {
-                  showModal("Error: Student ID, Name, or User ID missing. Please re-enter your details.", () => {});
-                  return;
-                }
-
-               const scoresCollectionRef = collection(db, `artifacts/${appId}/scores`);
-                await addDoc(scoresCollectionRef, {
-                  studentId: currentStudentId,
-                  studentName: currentStudentName,
-                  examDate: new Date(),
-                  score: correctCount,
-                  totalQuestions: questions.length,
-                  answers: questions.map(q => ({
-                    questionId: q.id,
-                    questionText: q.questionText,
-                    options: q.options,
-                    selectedOptionIndex: selectedAnswers[q.id] !== undefined ? selectedAnswers[q.id] : -1,
-                    correctOptionIndex: q.correctOptionIndex,
-                    isCorrect: selectedAnswers[q.id] === q.correctOptionIndex
-                  }))
+            const finishExam = async () => {
+                let correct = 0;
+                questions.forEach((q, i) => { if(answers[i] === q.correctOptionIndex) correct++; });
+                const pct = Math.round((correct / questions.length) * 100);
+                await fb.addDoc(fb.collection(fb.db, "scores"), {
+                    studentName: student.name, studentId: student.id, score: pct, date: new Date()
                 });
-                setExamSubmitted(true);
-                showModal(`Exam submitted! You scored ${correctCount} out of ${questions.length}.`, () => {});
-              } catch (e) {
-                console.error("Error submitting exam: ", e);
-                showModal("An error occurred while submitting your exam. Please try again.", () => {});
-              }
-            }, true);
-          };
+                setFinalScore(pct);
+                setFinished(true);
+            };
 
-          const currentQuestion = questions[currentQuestionIndex];
-
-          if (!currentStudentId) {
-            return (
-              <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-green-50 to-teal-100 p-4">
-                <div className="bg-white p-8 rounded-xl shadow-2xl text-center max-w-md w-full border border-green-200">
-                  <h2 className="text-3xl font-extrabold text-gray-800 mb-6">Enter Your Details</h2>
-                  <p className="text-gray-600 mb-6">Please enter your Student ID and Name to begin the exam.</p>
-                  <input
-                    type="text"
-                    className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-green-400 focus:border-transparent transition duration-200 ease-in-out"
-                    value={studentIdInput}
-                    onChange={(e) => setStudentIdInput(e.target.value)}
-                    placeholder="e.g., YourStudentID e.g 001"
-                  />
-                  <input
-                    type="text"
-                    className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-green-400 focus:border-transparent transition duration-200 ease-in-out"
-                    value={studentNameInput}
-                    onChange={(e) => setStudentNameInput(e.target.value)}
-                    placeholder="e.g., Oyewola Martins"
-                  />
-                  <button
-                    onClick={handleStudentLogin}
-                    className="w-full px-6 py-3 bg-green-600 text-white text-lg font-semibold rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-75 transition duration-300 ease-in-out transform hover:scale-105"
-                  >
-                    Start Exam
-                  </button>
-                  {examAlreadyTaken && (
-                     <p className="text-red-500 mt-4 text-sm">You have already completed an exam with this ID. You cannot retake it.</p>
-                  )}
+            if (finished) return (
+                <div className="flex flex-col items-center justify-center min-h-screen">
+                    <h1 className="text-6xl font-black text-blue-600">{finalScore}%</h1>
+                    <p className="text-xl mt-4">Great work, {student.name}!</p>
+                    <button onClick={() => setPage('home')} className="mt-8 bg-black text-white px-10 py-3 rounded-full">Exit</button>
                 </div>
-              </div>
             );
-          }
 
-          if (loadingQuestions) {
-            return (
-              <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-green-50 to-teal-100">
-                <p className="text-xl text-gray-700">Loading exam questions...</p>
-              </div>
+            if (!student) return (
+                <div className="flex items-center justify-center min-h-screen">
+                    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm border">
+                        <h2 className="text-2xl font-bold mb-6">Student Login</h2>
+                        <input className="w-full p-4 border rounded-xl mb-4 uppercase" placeholder="MS-XXXXX" onChange={e => setMsId(e.target.value)} />
+                        <button onClick={verifyId} className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold">{loading ? "Wait..." : "Start Exam"}</button>
+                        <button onClick={() => setPage('home')} className="w-full mt-4 text-gray-400">Cancel</button>
+                    </div>
+                </div>
             );
-          }
 
-          if (questions.length === 0) {
+            if (questions.length === 0) return <div className="p-20 text-center font-bold">Fetching Questions...</div>;
+
             return (
-              <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-green-50 to-teal-100">
-                <div className="bg-white p-8 rounded-xl shadow-2xl text-center max-w-md w-full border border-green-200">
-                  <h2 className="text-3xl font-extrabold text-gray-800 mb-4">No Questions Found</h2>
-                  <p className="text-gray-600">Please contact the administrator to add questions.</p>
-                  <button
-                    onClick={() => setCurrentPage('home')}
-                    className="mt-6 px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-75 transition duration-200 ease-in-out text-lg"
-                  >
-                    Back to Home
-                  </button>
+                <div className="max-w-2xl mx-auto p-6 pt-12">
+                    <div className="flex justify-between mb-8 font-bold text-blue-600">
+                        <span>{student.name}</span>
+                        <span>{index + 1} / {questions.length}</span>
+                    </div>
+                    <div className="bg-white p-8 rounded-2xl shadow-sm border">
+                        <p className="text-xl font-bold mb-8">{questions[index].questionText}</p>
+                        <div className="space-y-3">
+                            {questions[index].options.map((opt, i) => (
+                                <button key={i} onClick={() => setAnswers({...answers, [index]: i})} 
+                                className={`w-full p-5 text-left rounded-xl border-2 transition ${answers[index] === i ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border-gray-100'}`}>
+                                    {optionLetters[i]}. {opt}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="mt-10 flex justify-between">
+                            <button onClick={() => setIndex(i => i - 1)} disabled={index === 0}>Back</button>
+                            {index === questions.length - 1 ? 
+                                <button onClick={finishExam} className="bg-green-600 text-white px-10 py-3 rounded-xl font-bold">Finish</button> :
+                                <button onClick={() => setIndex(i => i + 1)} className="bg-blue-600 text-white px-10 py-3 rounded-xl font-bold">Next</button>
+                            }
+                        </div>
+                    </div>
                 </div>
-              </div>
             );
-          }
-
-          if (examSubmitted) {
-            return (
-              <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-green-50 to-teal-100 p-4">
-                <div className="bg-white p-8 rounded-xl shadow-2xl text-center max-w-lg w-full border border-green-200">
-                  <h2 className="text-4xl font-extrabold text-gray-800 mb-6">Exam Completed!</h2>
-                  <p className="text-2xl text-gray-700 mb-4">
-                    You scored <span className="font-bold text-green-600">{score}</span> out of <span className="font-bold text-gray-800">{questions.length}</span>.
-                  </p>
-                  <p className="text-lg text-gray-600 mb-8">
-                    Student Name: <span className="font-mono text-gray-700 break-all">{currentStudentName}</span><br/>
-                    Student ID: <span className="font-mono text-gray-700 break-all">{currentStudentId}</span>
-                  </p>
-                  <button
-                    onClick={() => {
-                      setStudentIdInput('');
-                      setStudentNameInput('');
-                      setCurrentStudentId('');
-                      setCurrentStudentName('');
-                      setExamSubmitted(false);
-                      setSelectedAnswers({});
-                      setScore(0);
-                      setCurrentQuestionIndex(0);
-                      setCurrentPage('home');
-                    }}
-                    className="px-8 py-3 bg-blue-600 text-white text-lg font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out transform hover:scale-105"
-                  >
-                    Go Back to Home
-                  </button>
-                </div>
-              </div>
-            );
-          }
-
-          return (
-            <div className="min-h-screen bg-gradient-to-br from-teal-50 to-lime-100 p-4 sm:p-6 lg:p-8">
-              <div className="max-w-3xl mx-auto bg-white p-6 sm:p-8 rounded-xl shadow-2xl border border-teal-200">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-3xl font-extrabold text-gray-800 text-center flex-grow">
-                    CBT Exam - Student: <span className="text-teal-600 break-all">{currentStudentName} ({currentStudentId})</span>
-                  </h2>
-                  <button
-                    onClick={() => setCurrentPage('home')}
-                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-75 transition duration-200 ease-in-out text-sm"
-                  >
-                    Back to Home
-                  </button>
-                </div>
-
-                {/* Question Counter */}
-                <p className="text-right text-gray-600 text-lg mb-4 font-semibold">
-                  Question {currentQuestionIndex + 1} of {questions.length}
-                </p>
-
-                {/* Current Question */}
-                <div className="mb-8 p-6 bg-teal-50 rounded-xl shadow-inner border border-teal-100">
-                  <p className="text-xl font-semibold text-gray-800 mb-4 leading-relaxed">
-                    {currentQuestion.questionText}
-                  </p>
-                  <div className="space-y-3">
-                    {currentQuestion.options.map((option, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleOptionSelect(currentQuestion.id, index)}
-                        className={`w-full text-left p-4 border rounded-lg transition duration-200 ease-in-out
-                          ${selectedAnswers[currentQuestion.id] === index
-                            ? 'bg-teal-600 text-white border-teal-700 shadow-md transform scale-105'
-                            : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-100 hover:border-teal-400'
-                          }
-                          focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-opacity-75`}
-                      >
-                        {optionLetters[index]}. {option}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Navigation Buttons */}
-                <div className="flex justify-between items-center mt-8">
-                  <button
-                    onClick={handlePreviousQuestion}
-                    disabled={currentQuestionIndex === 0}
-                    className={`px-6 py-3 rounded-lg shadow-md text-lg font-semibold transition duration-300 ease-in-out
-                      ${currentQuestionIndex === 0
-                        ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-                        : 'bg-blue-500 text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 transform hover:scale-105'
-                      }`}
-                  >
-                    Previous Question
-                  </button>
-
-                  {currentQuestionIndex === questions.length - 1 ? (
-                    <button
-                      onClick={handleSubmitExam}
-                      className="px-8 py-3 bg-green-600 text-white text-lg font-semibold rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-75 transition duration-300 ease-in-out transform hover:scale-105"
-                    >
-                      Submit Exam
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleNextQuestion}
-                      className="px-6 py-3 bg-blue-600 text-white text-lg font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out transform hover:scale-105"
-                    >
-                      Next Question
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
         };
 
-
-        // Main App Component
         const App = () => {
-          const [db, setDb] = React.useState(null);
-          const [auth, setAuth] = React.useState(null);
-          const [appId, setAppId] = React.useState('default-app-id');
-          const [userId, setUserId] = React.useState('loading...');
+            const [page, setPage] = React.useState('home');
+            const [ready, setReady] = React.useState(false);
 
-          const [currentPage, setCurrentPage] = React.useState('home');
+            React.useEffect(() => {
+                const i = setInterval(() => { if(window.fb) { setReady(true); clearInterval(i); }}, 100);
+            }, []);
 
-          const [modalMessage, setModalMessage] = React.useState('');
-          const [modalOnConfirm, setModalOnConfirm] = React.useState(() => () => {});
-          const [modalOnCancel, setModalOnCancel] = React.useState(() => () => {});
-          const [modalShowCancel, setModalShowCancel] = React.useState(false);
+            if (!ready) return <div className="p-20 text-center">Connecting to Server...</div>;
 
-          const showModal = (message, onConfirm, showCancel = false, onCancel = () => {}) => {
-            setModalMessage(message);
-            setModalOnConfirm(() => {
-              return () => {
-                onConfirm();
-                setModalMessage('');
-              };
-            });
-            setModalShowCancel(showCancel);
-            setModalOnCancel(() => {
-              return () => {
-                onCancel();
-                setModalMessage('');
-              };
-            });
-          };
-
-React.useEffect(() => {
-            try {
-              // FIREBASE CONFIGURATION (The public, clean config for deployment)
-              const firebaseConfig = {
-                apiKey: "AIzaSyDOO3uHmzOuAxJcdLxu-OImzlH12A6FpeY",
-                authDomain: "my-project-a6208.firebaseapp.com",
-                projectId: "my-project-a6208",
-                storageBucket: "my-project-a6208.firebasestorage.app",
-                messagingSenderId: "784486701962",
-                appId: "1:784486701962:web:0d3cd002bbfd647e944673",
-                measurementId: "G-DDVFJ0ST1X"
-              };
-
-              // INITIALIZE FIREBASE & SET CONTEXT VARIABLES
-              const app = initializeApp(firebaseConfig);
-              const firestore = getFirestore(app);
-              const firebaseAuth = getAuth(app);
-
-              setDb(firestore);
-              setAuth(firebaseAuth);
-
-              // CRITICAL FIX: Sets the projectId for Firestore path construction
-              setAppId(firebaseConfig.projectId);
-
-              // SIGN IN FUNCTION (Student anonymous sign-in)
-              const signIn = async () => {
-                try {
-                  const userCredential = await signInAnonymously(firebaseAuth);
-                  setUserId(userCredential.user.uid);
-                } catch (error) {
-                  console.error("Firebase authentication error:", error);
-                  showModal("An error occurred while signing in to Firebase. Please try again.", () => {});
-                }
-              };
-
-              // CALLS THE SIGN IN FUNCTION to start the session immediately
-              signIn(); 
-              
-              // This is the correct, remaining code for the auth state observer:
-              const unsubscribeAuth = onAuthStateChanged(firebaseAuth, (user) => {
-                if (user) {
-                  setUserId(user.uid);
-                } else {
-                  setUserId('anonymous');
-                }
-              });
-
-              return () => unsubscribeAuth();
-            } catch (error) {
-              console.error("Error initializing Firebase:", error);
-              showModal("An error occurred while initializing Firebase. Please try again.", () => {});
-            }
-    }, []);
-
-          const contextValue = {
-            db,
-            auth,
-            appId,
-            userId,
-            setCurrentPage,
-            showModal
-          };
-
-          return (
-            <AppContext.Provider value={contextValue}>
-              <div className="min-h-screen">
-                {modalMessage && (
-                  <Modal
-                    message={modalMessage}
-                    onConfirm={modalOnConfirm}
-                    onCancel={modalOnCancel}
-                    showCancel={modalShowCancel}
-                  />
-                )}
-                {currentPage === 'home' && <HomePage />}
-                {currentPage === 'admin' && <AdminPage />}
-                {currentPage === 'exam' && <StudentExamPage />}
-              </div>
-            </AppContext.Provider>
-          );
+            return (
+                <AppContext.Provider value={{ setPage }}>
+                    {page === 'home' && (
+                        <div className="flex flex-col items-center justify-center min-h-screen text-center">
+                            <h1 className="text-5xl font-black mb-10 tracking-tighter">MUSTARD SEED CBT</h1>
+                            <div className="space-x-4">
+                                <button onClick={() => setPage('exam')} className="bg-blue-600 text-white px-12 py-4 rounded-full font-bold shadow-lg">Login to Exam</button>
+                                <button onClick={() => setPage('admin')} className="bg-white text-gray-500 px-12 py-4 rounded-full font-bold border">Admin Panel</button>
+                            </div>
+                        </div>
+                    )}
+                    {page === 'exam' && <StudentExamPage />}
+                    {page === 'admin' && <AdminPage />}
+                </AppContext.Provider>
+            );
         };
 
         ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     </script>
 </body>
-
 </html>
-
-
-
-
-
-
-

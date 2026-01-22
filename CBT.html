@@ -19,23 +19,21 @@
         import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
-            // PASTE YOUR ACTUAL FIREBASE CONFIG HERE
-            apiKey: "...",
-            authDomain: "...",
-            projectId: "...",
-            storageBucket: "...",
-            messagingSenderId: "...",
-            appId: "..."
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
         };
 
         const app = initializeApp(firebaseConfig);
         
-        // This "Bridge" allows the React code below to see Firebase functions
-        window.firebaseGate = {
+        // Exporting to window so Babel script can see it
+        window.fb = {
             db: getFirestore(app),
             auth: getAuth(app),
-            collection, addDoc, getDocs, doc, deleteDoc, onSnapshot, query, where,
-            signInAnonymously, onAuthStateChanged
+            collection, addDoc, getDocs, query, where, signInAnonymously
         };
     </script>
 
@@ -47,129 +45,101 @@
 
         const AppContext = React.createContext(null);
 
-        // Student Exam Page with Supabase Verification
         const StudentExamPage = () => {
-            const { db, appId, showModal, setCurrentPage, firebase } = React.useContext(AppContext);
-            
-            const [studentIdInput, setStudentIdInput] = React.useState('');
-            const [isVerifying, setIsVerifying] = React.useState(false);
-            const [currentStudentId, setCurrentStudentId] = React.useState('');
-            const [currentStudentName, setCurrentStudentName] = React.useState('');
-            
+            const { appId, setPage } = React.useContext(AppContext);
+            const [msId, setMsId] = React.useState('');
+            const [student, setStudent] = React.useState(null);
             const [questions, setQuestions] = React.useState([]);
-            const [currentQuestionIndex, setCurrentQuestionIndex] = React.useState(0);
-            const [selectedAnswers, setSelectedAnswers] = React.useState({});
-            const [examSubmitted, setExamSubmitted] = React.useState(false);
-            const [score, setScore] = React.useState(0);
+            const [index, setIndex] = React.useState(0);
+            const [answers, setAnswers] = React.useState({});
+            const [loading, setLoading] = React.useState(false);
+            const [finished, setFinished] = React.useState(false);
+            const [finalScore, setFinalScore] = React.useState(0);
 
+            // 1. Verify with Supabase
             const verifyAndStart = async () => {
-    if (!msId.trim()) return alert("Please enter your MS-ID");
-    setLoading(true);
-    
-    const inputId = msId.toUpperCase().trim();
+                if (!msId.trim()) return alert("Enter MS-ID");
+                setLoading(true);
+                try {
+                    const { data, error } = await _supabase
+                        .from('students')
+                        .select('full_name, username')
+                        .eq('username', msId.toUpperCase().trim())
+                        .single();
 
-    try {
-        // 1. Get all enrolled students from the 'students' table
-        const { data: students, error } = await _supabase
-            .from('students')
-            .select('id, full_name')
-            .eq('status', 'Enrolled');
+                    if (error || !data) {
+                        alert("ID not found in Mustard Seed database.");
+                    } else {
+                        setStudent(data);
+                        fetchQuestions();
+                    }
+                } catch (e) { alert("Check Connection"); }
+                setLoading(false);
+            };
 
-        if (error) throw error;
-
-        // 2. Find the student whose calculated MS-ID matches the input
-        const foundStudent = students.find(s => {
-            const calculatedID = "MS-" + s.id.substring(0, 5).toUpperCase();
-            return calculatedID === inputId;
-        });
-
-        if (foundStudent) {
-            // Success! We match the calculated ID to the real student
-            setStudent({
-                full_name: foundStudent.full_name,
-                username: inputId // Store the MS-ID for the score record
-            });
-            fetchQuestions();
-        } else {
-            alert("Access Denied: " + inputId + " not found. Make sure you have submitted your Admission Form first.");
-        }
-
-    } catch (e) {
-        console.error(e);
-        alert("System Error: Could not connect to student records.");
-    } finally {
-        setLoading(false);
-    }
-};
+            // 2. Fetch Questions from Firebase
             const fetchQuestions = async () => {
-                const qRef = firebase.collection(db, `artifacts/${appId}/public/data/questions`);
-                const snapshot = await firebase.getDocs(qRef);
-                setQuestions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+                const qRef = fb.collection(fb.db, `artifacts/${appId}/public/data/questions`);
+                const snap = await fb.getDocs(qRef);
+                setQuestions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
             };
 
-            const handleFinish = async () => {
-                let correct = 0;
-                questions.forEach((q, i) => { if(selectedAnswers[i] === q.correctOptionIndex) correct++; });
-                const pct = Math.round((correct / questions.length) * 100);
+            // 3. Submit to Firebase
+            const submitExam = async () => {
+                let score = 0;
+                questions.forEach((q, i) => { if(answers[i] === q.correctOptionIndex) score++; });
+                const pct = Math.round((score / questions.length) * 100);
                 
-                await firebase.addDoc(firebase.collection(db, `artifacts/${appId}/scores`), {
-                    name: currentStudentName,
-                    id: currentStudentId,
+                await fb.addDoc(fb.collection(fb.db, `artifacts/${appId}/scores`), {
+                    studentName: student.full_name,
+                    studentId: student.username,
                     score: pct,
-                    date: new Date()
+                    timestamp: new Date()
                 });
-                setScore(pct);
-                setExamSubmitted(true);
+                setFinalScore(pct);
+                setFinished(true);
             };
 
-            if (!currentStudentId) {
-                return (
-                    <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-slate-50">
-                        <div className="bg-white p-8 rounded-2xl shadow-xl border w-full max-w-sm">
-                            <h2 className="text-2xl font-bold text-slate-800 mb-4">Student Login</h2>
-                            <input 
-                                className="w-full p-4 border rounded-xl mb-4 font-mono uppercase"
-                                placeholder="MS-ID (e.g. MS-001)"
-                                value={studentIdInput}
-                                onChange={(e) => setStudentIdInput(e.target.value)}
-                            />
-                            <button 
-                                onClick={handleStartExam}
-                                className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold"
-                            >
-                                {isVerifying ? "Verifying..." : "Verify & Start"}
-                            </button>
-                        </div>
-                    </div>
-                );
-            }
+            if (finished) return (
+                <div className="flex flex-col items-center justify-center min-h-screen text-center">
+                    <h1 className="text-4xl font-bold text-blue-600 mb-2">{finalScore}%</h1>
+                    <p className="text-gray-500 mb-6">Exam submitted successfully, {student.full_name}!</p>
+                    <button onClick={() => setPage('home')} className="bg-gray-800 text-white px-8 py-2 rounded-full">Exit</button>
+                </div>
+            );
 
-            if (examSubmitted) {
-                return <div className="text-center p-20"><h1>Score: {score}%</h1></div>;
-            }
+            if (!student) return (
+                <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                    <div className="bg-white p-8 rounded-2xl shadow-lg max-w-sm w-full">
+                        <h2 className="text-xl font-bold mb-4">Student Login</h2>
+                        <input className="w-full p-3 border rounded mb-4" placeholder="MS-ID" value={msId} onChange={e => setMsId(e.target.value)} />
+                        <button onClick={verifyAndStart} className="w-full py-3 bg-blue-600 text-white rounded font-bold">
+                            {loading ? "Verifying..." : "Enter Exam"}
+                        </button>
+                    </div>
+                </div>
+            );
 
             return (
-                <div className="p-6 max-w-2xl mx-auto">
-                    <h2 className="font-bold border-b pb-2 mb-4">{currentStudentName} ({currentStudentId})</h2>
+                <div className="max-w-2xl mx-auto p-6">
+                    <div className="flex justify-between mb-8 text-sm font-bold text-gray-400 uppercase">
+                        <span>{student.full_name}</span>
+                        <span>Question {index + 1}/{questions.length}</span>
+                    </div>
                     {questions.length > 0 && (
-                        <div className="bg-white p-6 rounded-lg shadow">
-                            <p className="text-lg mb-6">{questions[currentQuestionIndex].questionText}</p>
-                            <div className="space-y-2">
-                                {questions[currentQuestionIndex].options.map((opt, idx) => (
-                                    <button 
-                                        key={idx}
-                                        onClick={() => setSelectedAnswers({...selectedAnswers, [currentQuestionIndex]: idx})}
-                                        className={`w-full p-4 text-left border rounded-lg ${selectedAnswers[currentQuestionIndex] === idx ? 'bg-blue-100 border-blue-500' : ''}`}
-                                    >
-                                        {opt}
-                                    </button>
-                                ))}
-                            </div>
+                        <div className="bg-white p-6 rounded-xl shadow-sm border">
+                            <p className="text-xl mb-6">{questions[index].questionText}</p>
+                            {questions[index].options.map((opt, i) => (
+                                <button key={i} onClick={() => setAnswers({...answers, [index]: i})} 
+                                    className={`w-full p-4 mb-2 text-left rounded border ${answers[index] === i ? 'bg-blue-50 border-blue-500' : 'border-gray-100'}`}>
+                                    {opt}
+                                </button>
+                            ))}
                             <div className="mt-8 flex justify-between">
-                                <button onClick={() => setCurrentQuestionIndex(prev => prev - 1)} disabled={currentQuestionIndex === 0}>Back</button>
-                                {currentQuestionIndex === questions.length - 1 ? 
-                                    <button onClick={handleFinish} className="bg-green-600 text-white px-6 py-2 rounded">Submit</button> :
-                                    <button onClick={() => setCurrentQuestionIndex(prev => prev + 1)} className="bg-blue-600 text-white px-6 py-2 rounded">Next</button>
+                                <button onClick={() => setIndex(i => i - 1)} disabled={index === 0}>Back</button>
+                                {index === questions.length - 1 ? 
+                                    <button onClick={submitExam} className="bg-green-600 text-white px-8 py-2 rounded">Finish</button> :
+                                    <button onClick={() => setIndex(i => i + 1)} className="bg-blue-600 text-white px-8 py-2 rounded">Next</button>
                                 }
                             </div>
                         </div>
@@ -178,36 +148,28 @@
             );
         };
 
-        // Main App Wrapper
         const App = () => {
-            const [currentPage, setCurrentPage] = React.useState('home');
-            const [appId] = React.useState('mustard-seed-cbt'); // Your App ID
+            const [page, setPage] = React.useState('home');
+            // Wait for the Firebase "Bridge" to be ready
+            const [ready, setReady] = React.useState(false);
             
-            // Wait for Firebase Gate to open
-            if (!window.firebaseGate) return <div className="p-10 text-center">Initializing System...</div>;
+            React.useEffect(() => {
+                const check = setInterval(() => {
+                    if (window.fb) { setReady(true); clearInterval(check); }
+                }, 100);
+            }, []);
+
+            if (!ready) return <div className="p-10 text-center text-gray-400">Loading System Assets...</div>;
 
             return (
-                <AppContext.Provider value={{ 
-                    db: window.firebaseGate.db, 
-                    firebase: window.firebaseGate,
-                    appId, 
-                    setCurrentPage,
-                    showModal: (msg) => alert(msg) 
-                }}>
-                    <div className="min-h-screen bg-white text-slate-900 font-sans">
-                        {currentPage === 'home' && (
-                            <div className="flex flex-col items-center justify-center min-h-screen">
-                                <h1 className="text-4xl font-black mb-8">Mustard Seed CBT</h1>
-                                <button 
-                                    onClick={() => setCurrentPage('exam')}
-                                    className="px-12 py-4 bg-blue-600 text-white rounded-full font-bold shadow-lg"
-                                >
-                                    Take Examination
-                                </button>
-                            </div>
-                        )}
-                        {currentPage === 'exam' && <StudentExamPage />}
-                    </div>
+                <AppContext.Provider value={{ appId: 'mustard-seed-cbt', setPage }}>
+                    {page === 'home' && (
+                        <div className="flex flex-col items-center justify-center min-h-screen">
+                            <h1 className="text-3xl font-black mb-6">MUSTARD SEED CBT</h1>
+                            <button onClick={() => setPage('exam')} className="bg-blue-600 text-white px-10 py-4 rounded-full font-bold shadow-lg">Start Exam</button>
+                        </div>
+                    )}
+                    {page === 'exam' && <StudentExamPage />}
                 </AppContext.Provider>
             );
         };

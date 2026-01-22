@@ -53,52 +53,233 @@
     <div id="root">
         <!-- Your React app will render here -->
     </div>
-    <script type="text/babel">
         <script type="text/babel">
-    // 1. INITIALIZE SUPABASE FIRST
+    // 1. INITIALIZE SUPABASE
     const { createClient } = window.supabase;
-    const _supabase = createClient('https://jqrcoqslmylmubxwfgyt.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxcmNvcXNsbXlsbXVieHdmZ3l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2ODc2NzgsImV4cCI6MjA4MDI2MzY3OH0.4bXOY35R3eGYZjPxtuJzvwifPEfHXr5UEdzFbB-caKU');
-        // Access Firebase modules from the global scope
-        const { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, collection, addDoc, getDocs, doc, deleteDoc, onSnapshot, query, where } = window.firebase;
+    const SB_URL = 'https://jqrcoqslmylmubxwfgyt.supabase.co';
+    const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxcmNvcXNsbXlsbXVieHdmZ3l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2ODc2NzgsImV4cCI6MjA4MDI2MzY3OH0.4bXOY35R3eGYZjPxtuJzvwifPEfHXr5UEdzFbB-caKU';
+    const _supabase = createClient(SB_URL, SB_KEY);
 
-        // Create a context for Firebase services and user data
-        const AppContext = React.createContext(null);
+    // 2. INITIALIZE FIREBASE (Accessing global firebase object from the module script)
+    const { initializeApp, getAuth, signInAnonymously, onAuthStateChanged, getFirestore, collection, addDoc, getDocs, doc, deleteDoc, onSnapshot, query, where } = window.firebase;
 
-        // Helper to map option index to letter (A, B, C, D)
-        const optionLetters = ['A', 'B', 'C', 'D'];
+    const AppContext = React.createContext(null);
+    const optionLetters = ['A', 'B', 'C', 'D'];
+    const ADMIN_PASSWORD = 'SUNNYKEYZ2025@';
 
-        // Admin Password (hardcoded for this example as per request)
-        const ADMIN_PASSWORD = 'SUNNYKEYZ2025@';
+    // --- STUDENT EXAM PAGE COMPONENT ---
+    const StudentExamPage = () => {
+        const { db, appId, showModal, setCurrentPage, userId } = React.useContext(AppContext);
+        
+        // Input states
+        const [studentIdInput, setStudentIdInput] = React.useState('');
+        const [isVerifying, setIsVerifying] = React.useState(false);
+        
+        // Verified Student states
+        const [currentStudentId, setCurrentStudentId] = React.useState('');
+        const [currentStudentName, setCurrentStudentName] = React.useState('');
 
-        // Modal Component for alerts and confirmations
-        const Modal = ({ message, onConfirm, onCancel, showCancel = false }) => {
-          if (!message) return null;
+        // Exam states
+        const [questions, setQuestions] = React.useState([]);
+        const [currentQuestionIndex, setCurrentQuestionIndex] = React.useState(0);
+        const [selectedAnswers, setSelectedAnswers] = React.useState({});
+        const [examSubmitted, setExamSubmitted] = React.useState(false);
+        const [score, setScore] = React.useState(0);
+        const [loadingQuestions, setLoadingQuestions] = React.useState(false);
 
-          return (
-            <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-xl shadow-lg p-6 max-w-sm w-full border border-gray-200">
-                <p className="text-gray-800 text-lg font-semibold mb-6 text-center">{message}</p>
-                <div className="flex justify-center space-x-4">
-                  {showCancel && (
-                    <button
-                      onClick={onCancel}
-                      className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-75 transition duration-200 ease-in-out"
-                    >
-                      Cancel
-                    </button>
-                  )}
-                  <button
-                    onClick={onConfirm}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out"
-                  >
-                    OK
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
+        // Function to Verify ID via Supabase
+        const handleStartExam = async () => {
+            if (!studentIdInput.trim()) {
+                showModal("Please enter your Admission Number (MS-XXXX).");
+                return;
+            }
+
+            setIsVerifying(true);
+            try {
+                const { data, error } = await _supabase
+                    .from('students')
+                    .select('full_name, username')
+                    .eq('username', studentIdInput.toUpperCase().trim())
+                    .single();
+
+                if (error || !data) {
+                    showModal("Access Denied: Invalid Admission Number. Please check your profile.");
+                } else {
+                    // Success: Lock in the student identity
+                    setCurrentStudentId(data.username);
+                    setCurrentStudentName(data.full_name);
+                    fetchQuestions();
+                }
+            } catch (err) {
+                showModal("Database connection error. Please try again.");
+            } finally {
+                setIsVerifying(false);
+            }
         };
 
+        const fetchQuestions = async () => {
+            setLoadingQuestions(true);
+            try {
+                const qRef = collection(db, `artifacts/${appId}/public/data/questions`);
+                const snapshot = await getDocs(qRef);
+                const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setQuestions(fetched);
+            } catch (e) {
+                showModal("Error loading questions from server.");
+            } finally {
+                setLoadingQuestions(false);
+            }
+        };
+
+        const handleFinish = async () => {
+            let correctCount = 0;
+            questions.forEach((q, idx) => {
+                if (selectedAnswers[idx] === q.correctOptionIndex) correctCount++;
+            });
+
+            const finalPercentage = Math.round((correctCount / questions.length) * 100);
+            setScore(finalPercentage);
+
+            try {
+                // Save to Firebase Scores
+                await addDoc(collection(db, `artifacts/${appId}/scores`), {
+                    studentName: currentStudentName,
+                    admissionNo: currentStudentId,
+                    score: finalPercentage,
+                    examDate: new Date(),
+                    status: 'Completed'
+                });
+                setExamSubmitted(true);
+            } catch (err) {
+                showModal("Error saving results. Please take a screenshot of your score.");
+            }
+        };
+
+        // UI: ID ENTRY GATE
+        if (!currentStudentId) {
+            return (
+                <div className="flex items-center justify-center min-h-screen bg-blue-50 p-4">
+                    <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-blue-100">
+                        <h2 className="text-3xl font-extrabold text-blue-900 mb-2">CBT Entry</h2>
+                        <p className="text-gray-500 mb-6 text-sm">Verify your MS-ID to unlock the examination questions.</p>
+                        
+                        <div className="mb-6">
+                            <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Admission Number</label>
+                            <input 
+                                type="text" 
+                                placeholder="e.g. MS-001"
+                                className="w-full p-4 bg-gray-50 border rounded-xl text-xl font-mono focus:ring-2 focus:ring-blue-500 outline-none"
+                                value={studentIdInput}
+                                onChange={(e) => setStudentIdInput(e.target.value)}
+                            />
+                        </div>
+
+                        <button 
+                            onClick={handleStartExam}
+                            disabled={isVerifying}
+                            className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition active:scale-95 shadow-lg"
+                        >
+                            {isVerifying ? "Verifying ID..." : "Start Examination"}
+                        </button>
+                        <button onClick={() => setCurrentPage('home')} className="w-full mt-4 text-gray-400 text-sm">Cancel and Return</button>
+                    </div>
+                </div>
+            );
+        }
+
+        // UI: EXAM RESULTS
+        if (examSubmitted) {
+            return (
+                <div className="flex flex-col items-center justify-center min-h-screen bg-white p-6">
+                    <div className="text-center">
+                        <div className="text-6xl mb-4">🎉</div>
+                        <h2 className="text-3xl font-bold text-gray-800">Exam Submitted</h2>
+                        <p className="text-gray-500 mt-2">Well done, {currentStudentName}!</p>
+                        <div className="text-7xl font-black text-blue-600 my-8">{score}%</div>
+                        <button 
+                            onClick={() => setCurrentPage('home')}
+                            className="px-10 py-3 bg-gray-900 text-white rounded-full font-bold"
+                        >
+                            Exit Portal
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        // UI: THE EXAM QUESTIONS
+        return (
+            <div className="min-h-screen bg-gray-50 p-4 md:p-10">
+                <div className="max-w-3xl mx-auto">
+                    <div className="flex justify-between items-center mb-6">
+                        <div>
+                            <h3 className="font-bold text-gray-800">{currentStudentName}</h3>
+                            <p className="text-xs text-gray-500">{currentStudentId}</p>
+                        </div>
+                        <div className="bg-white px-4 py-2 rounded-lg shadow-sm border font-bold text-blue-600">
+                            Question {currentQuestionIndex + 1} / {questions.length}
+                        </div>
+                    </div>
+
+                    {loadingQuestions ? (
+                        <div className="text-center py-20 font-medium text-gray-500">Preparing questions...</div>
+                    ) : questions.length > 0 ? (
+                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
+                            <p className="text-xl font-medium text-gray-800 mb-8 leading-relaxed">
+                                {questions[currentQuestionIndex]?.questionText}
+                            </p>
+
+                            <div className="space-y-3">
+                                {questions[currentQuestionIndex]?.options.map((opt, idx) => (
+                                    <button 
+                                        key={idx}
+                                        onClick={() => setSelectedAnswers({...selectedAnswers, [currentQuestionIndex]: idx})}
+                                        className={`w-full p-4 text-left border-2 rounded-xl transition-all ${
+                                            selectedAnswers[currentQuestionIndex] === idx 
+                                            ? 'border-blue-600 bg-blue-50 text-blue-800' 
+                                            : 'border-gray-50 hover:border-gray-200'
+                                        }`}
+                                    >
+                                        <span className="font-bold mr-3 text-gray-400">{optionLetters[idx]}.</span> {opt}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="mt-10 flex justify-between items-center border-t pt-6">
+                                <button 
+                                    disabled={currentQuestionIndex === 0}
+                                    onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
+                                    className="text-gray-400 font-bold disabled:opacity-0"
+                                >
+                                    Previous
+                                </button>
+                                
+                                {currentQuestionIndex === questions.length - 1 ? (
+                                    <button 
+                                        onClick={handleFinish}
+                                        className="bg-green-600 text-white px-10 py-3 rounded-xl font-bold shadow-lg hover:bg-green-700"
+                                    >
+                                        Submit Final Result
+                                    </button>
+                                ) : (
+                                    <button 
+                                        onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
+                                        className="bg-blue-600 text-white px-10 py-3 rounded-xl font-bold hover:bg-blue-700"
+                                    >
+                                        Next Question
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="text-center py-20 bg-white rounded-2xl border border-dashed">
+                            No questions available for this exam session.
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    };
         // Home Page Component
         const HomePage = () => {
           const { setCurrentPage, userId } = React.useContext(AppContext);
@@ -1234,5 +1415,6 @@ React.useEffect(() => {
 </body>
 
 </html>
+
 
 

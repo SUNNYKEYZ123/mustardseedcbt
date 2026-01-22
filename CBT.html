@@ -58,7 +58,7 @@
             React.useEffect(() => {
                 if (!auth) return;
                 const qScores = fb.query(fb.collection(fb.db, "scores"));
-                const qQuest = fb.query(fb.collection(fb.db, "questions"));
+                const qQuest = fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"));
                 
                 const unsub1 = fb.onSnapshot(qScores, (s) => setScores(s.docs.map(d => ({id: d.id, ...d.data()}))));
                 const unsub2 = fb.onSnapshot(qQuest, (s) => setQuestions(s.docs.map(d => ({id: d.id, ...d.data()}))));
@@ -141,7 +141,7 @@
                 const found = data?.find(s => ("MS-" + s.id.substring(0, 5).toUpperCase()) === inputId);
                 if (found) {
                     setStudent({ name: found.full_name, id: inputId });
-                    const snap = await fb.getDocs(fb.collection(fb.db, "questions"));
+                    const snap = await fb.getDocs(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"));
                     setQuestions(snap.docs.map(d => ({id: d.id, ...d.data()})));
                 } else { alert("ID Not Found"); }
                 setLoading(false);
@@ -238,4 +238,5 @@
     </script>
 </body>
 </html>
+
 

@@ -749,13 +749,13 @@ const StudentExamPage = () => {
 
         setIsVerifying(true);
         try {
-            // Check Supabase 'students' table for the MS-ID
-            const { data, error } = await _supabase
-                .from('students')
-                .select('full_name, username')
-                .eq('username', studentIdInput.toUpperCase().trim())
-                .single();
-
+    const verifyAndStart = async () => {
+        if (!msId.trim()) return alert("Please enter your MS-ID");
+        setLoading(true);
+        
+        const inputId = msId.toUpperCase().trim();
+        // ... the rest of your new code ...
+    };
             if (error || !data) {
                 showModal("Access Denied: Invalid ID. Please use the MS-ID from your profile.");
                 setIsVerifying(false);
@@ -1280,4 +1280,5 @@ React.useEffect(() => {
 </body>
 
 </html>
+
 

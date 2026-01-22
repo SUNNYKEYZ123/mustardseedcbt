@@ -151,7 +151,7 @@
                 let correct = 0;
                 questions.forEach((q, i) => { if(answers[i] === q.correctOptionIndex) correct++; });
                 const pct = Math.round((correct / questions.length) * 100);
-                await fb.addDoc(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), {
+                await fb.addDoc(artifacts/my-project-a6208/public/data/questions"), {
                     studentName: student.name, studentId: student.id, score: pct, date: new Date()
                 });
                 setFinalScore(pct);
@@ -238,6 +238,7 @@
     </script>
 </body>
 </html>
+
 
 
 

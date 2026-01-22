@@ -280,6 +280,7 @@
             }
           };
     </script>
+    <script type="text/babel">
     // Fetch questions from Firestore in real-time
           // Fetch questions from Firestore in real-time
           React.useEffect(() => {
@@ -302,7 +303,8 @@
             return () => unsubscribe();
           }, [db, appId, isAdminAuthenticated, showModal]);
 </script>
-         // Assume 'userId' is available from your AppContext.
+         <script type="text/babel">
+             // Assume 'userId' is available from your AppContext.
 // Fetch all student scores
 React.useEffect(() => {
     // 1. Initial check for core dependencies.
@@ -349,7 +351,8 @@ React.useEffect(() => {
     };
 
     fetchAllStudentScores();
-
+    </script>
+    <script type="text/babel">
     // ✅ FIX: The hook now depends on the specific 'userId' variable
 }, [db, appId, userId, showModal]);
 
@@ -377,7 +380,8 @@ React.useEffect(() => {
               showModal("An error occurred while adding the question. Please try again.", () => {});
             }
           };
-
+    </script>
+    <script type="text/babel">
           // Handle deleting a question
           const handleDeleteQuestion = async (id) => {
             showModal("Are you sure you want to delete this question?", async () => {
@@ -391,14 +395,16 @@ React.useEffect(() => {
               }
             }, true);
           };
-
+    </script>
+    <script type="text/babel">
           // Handle option change for single question add
           const handleOptionChange = (index, value) => {
             const newOptions = [...options];
             newOptions[index] = value;
             setOptions(newOptions);
           };
-
+    </script>
+    <script type="text/babel">
           // Parse bulk questions from pasted text
           const parseBulkQuestions = (text) => {
             const questionBlocks = text.split(/\n\s*\n/).filter(block => block.trim() !== '');
@@ -454,7 +460,8 @@ React.useEffect(() => {
 
             return { parsedQuestions, errors };
           };
-
+    </script>
+    <script type="text/babel">
           // Handle bulk adding questions
           const handleBulkAddQuestions = async () => {
             if (!bulkQuestionInput.trim()) {
@@ -486,7 +493,8 @@ React.useEffect(() => {
               }
             }, true);
           };
-
+    </script>
+    <script type="text/babel">
           // Handle AI question generation
           const handleGenerateAiQuestions = async () => {
             if (!aiQuestionTopic.trim()) {
@@ -1353,6 +1361,7 @@ React.useEffect(() => {
 </body>
 
 </html>
+
 
 
 

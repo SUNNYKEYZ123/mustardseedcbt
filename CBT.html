@@ -210,6 +210,7 @@
         );
     };
         </script>
+    <script type="text/babel">
     // --- MAIN APP ---
     const App = () => {
         const [page, setPage] = React.useState('home');
@@ -248,6 +249,8 @@
 <div id="root"></div>
 
     <div id="root"></div>
+</script>
+    <script type="text/babel">
         // Admin Page Component
         const AdminPage = () => {
         const { db, appId, showModal, setCurrentPage, userId } = React.useContext(AppContext);
@@ -265,7 +268,8 @@
           const [studentScores, setStudentScores] = React.useState([]);
           const [loadingScores, setLoadingScores] = React.useState(true);
 
-
+            </script>
+    <script type="text/babel">
           // Authenticate admin
           const handleAdminLogin = () => {
             if (adminPasswordInput === ADMIN_PASSWORD) {
@@ -275,7 +279,8 @@
               showModal("Incorrect password. Please try again.", () => {});
             }
           };
-
+    </script>
+    // Fetch questions from Firestore in real-time
           // Fetch questions from Firestore in real-time
           React.useEffect(() => {
             if (!db || !appId || !isAdminAuthenticated) return;
@@ -296,7 +301,7 @@
 
             return () => unsubscribe();
           }, [db, appId, isAdminAuthenticated, showModal]);
-
+</script>
          // Assume 'userId' is available from your AppContext.
 // Fetch all student scores
 React.useEffect(() => {
@@ -1348,6 +1353,7 @@ React.useEffect(() => {
 </body>
 
 </html>
+
 
 
 

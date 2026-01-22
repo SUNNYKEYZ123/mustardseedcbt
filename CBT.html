@@ -57,27 +57,45 @@
             const [finished, setFinished] = React.useState(false);
             const [finalScore, setFinalScore] = React.useState(0);
 
-            // 1. Verify with Supabase
-            const verifyAndStart = async () => {
-                if (!msId.trim()) return alert("Enter MS-ID");
-                setLoading(true);
-                try {
-                    const { data, error } = await _supabase
-                        .from('students')
-                        .select('full_name, username')
-                        .eq('username', msId.toUpperCase().trim())
-                        .single();
+            // PASTE THIS NEW VERSION HERE:
+const verifyAndStart = async () => {
+    if (!msId.trim()) return alert("Please enter your MS-ID");
+    setLoading(true);
+    
+    const inputId = msId.toUpperCase().trim();
 
-                    if (error || !data) {
-                        alert("ID not found in Mustard Seed database.");
-                    } else {
-                        setStudent(data);
-                        fetchQuestions();
-                    }
-                } catch (e) { alert("Check Connection"); }
-                setLoading(false);
-            };
+    try {
+        // 1. Get all enrolled students from the 'students' table
+        const { data: students, error } = await _supabase
+            .from('students')
+            .select('id, full_name')
+            .eq('status', 'Enrolled');
 
+        if (error) throw error;
+
+        // 2. Find the student whose calculated MS-ID matches the input
+        const foundStudent = students.find(s => {
+            const calculatedID = "MS-" + s.id.substring(0, 5).toUpperCase();
+            return calculatedID === inputId;
+        });
+
+        if (foundStudent) {
+            setStudent({
+                full_name: foundStudent.full_name,
+                username: inputId 
+            });
+            fetchQuestions();
+        } else {
+            alert("Access Denied: " + inputId + " not found. Make sure you have submitted your Admission Form first.");
+        }
+
+    } catch (e) {
+        console.error(e);
+        alert("System Error: Could not connect to student records.");
+    } finally {
+        setLoading(false);
+    }
+};
             // 2. Fetch Questions from Firebase
             const fetchQuestions = async () => {
                 const qRef = fb.collection(fb.db, `artifacts/${appId}/public/data/questions`);
@@ -1280,5 +1298,6 @@ React.useEffect(() => {
 </body>
 
 </html>
+
 
 

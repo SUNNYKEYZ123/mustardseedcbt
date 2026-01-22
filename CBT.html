@@ -57,6 +57,10 @@
 const { createClient } = window.supabase; // Make sure Supabase CDN is in your <head>
 const _supabase = createClient('YOUR_SUPABASE_URL', 'YOUR_SUPABASE_ANON_KEY');
     <script type="text/babel">
+        <script type="text/babel">
+    // 1. INITIALIZE SUPABASE FIRST
+    const { createClient } = window.supabase;
+    const _supabase = createClient('https://jqrcoqslmylmubxwfgyt.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxcmNvcXNsbXlsbXVieHdmZ3l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2ODc2NzgsImV4cCI6MjA4MDI2MzY3OH0.4bXOY35R3eGYZjPxtuJzvwifPEfHXr5UEdzFbB-caKU');
         // Access Firebase modules from the global scope
         const { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, collection, addDoc, getDocs, doc, deleteDoc, onSnapshot, query, where } = window.firebase;
 
@@ -119,11 +123,11 @@ const _supabase = createClient('YOUR_SUPABASE_URL', 'YOUR_SUPABASE_ANON_KEY');
                     Login as Admin
                   </button>
                   <button
-                    onClick={() => setCurrentPage('exam')}
-                    className="w-full px-6 py-3 bg-green-500 text-white text-lg font-semibold rounded-lg shadow-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-75 transition duration-300 ease-in-out transform hover:scale-105"
-                  >
-                    Take an Exam
-                  </button>
+    onClick={() => setCurrentPage('exam')}
+    className="w-full px-6 py-3 bg-green-500 text-white ..."
+>
+    Take an Exam
+</button>
                 </div>
                 <p className="text-sm text-gray-500 mt-8">
                   Your User ID: <span className="font-mono text-gray-700 break-all">{userId}</span>
@@ -678,21 +682,149 @@ React.useEffect(() => {
         };
 
         // Student Exam Page Component
-        const StudentExamPage = () => {
-          const { db, appId, showModal, setCurrentPage, userId } = React.useContext(AppContext);
-          const [studentIdInput, setStudentIdInput] = React.useState('');
-          const [studentNameInput, setStudentNameInput] = React.useState('');
-          const [currentStudentId, setCurrentStudentId] = React.useState('');
-          const [currentStudentName, setCurrentStudentName] = React.useState('');
+const StudentExamPage = () => {
+    const { db, appId, showModal, setCurrentPage, userId } = React.useContext(AppContext);
+    const [studentIdInput, setStudentIdInput] = React.useState(''); // This is where they type MS-XXXX
+    const [studentNameInput, setStudentNameInput] = React.useState(''); 
+    const [currentStudentId, setCurrentStudentId] = React.useState('');
+    const [currentStudentName, setCurrentStudentName] = React.useState('');
 
-          const [questions, setQuestions] = React.useState([]);
-          const [currentQuestionIndex, setCurrentQuestionIndex] = React.useState(0);
-          const [selectedAnswers, setSelectedAnswers] = React.useState({});
-          const [examSubmitted, setExamSubmitted] = React.useState(false);
-          const [score, setScore] = React.useState(0);
-          const [loadingQuestions, setLoadingQuestions] = React.useState(true);
-          const [examAlreadyTaken, setExamAlreadyTaken] = React.useState(false);
+    const [questions, setQuestions] = React.useState([]);
+    const [currentQuestionIndex, setCurrentQuestionIndex] = React.useState(0);
+    const [selectedAnswers, setSelectedAnswers] = React.useState({});
+    const [examSubmitted, setExamSubmitted] = React.useState(false);
+    const [score, setScore] = React.useState(0);
+    const [loadingQuestions, setLoadingQuestions] = React.useState(true);
+    const [isVerifying, setIsVerifying] = React.useState(false);
 
+    // --- NEW: VERIFY MS-ID WITH SUPABASE ---
+    const handleStartExam = async () => {
+        if (!studentIdInput.trim()) {
+            showModal("Please enter your Admission Number (MS-ID).");
+            return;
+        }
+
+        setIsVerifying(true);
+        try {
+            // Check Supabase 'students' table for the MS-ID
+            const { data, error } = await _supabase
+                .from('students')
+                .select('full_name, username')
+                .eq('username', studentIdInput.toUpperCase().trim())
+                .single();
+
+            if (error || !data) {
+                showModal("Access Denied: Invalid ID. Please use the MS-ID from your profile.");
+                setIsVerifying(false);
+                return;
+            }
+
+            // If ID is valid, set the names and load questions
+            setCurrentStudentId(data.username);
+            setCurrentStudentName(data.full_name);
+            fetchQuestions();
+        } catch (err) {
+            showModal("Connection error. Check your internet.");
+            setIsVerifying(false);
+        }
+    };
+
+    const fetchQuestions = async () => {
+        setLoadingQuestions(true);
+        const qRef = collection(db, `artifacts/${appId}/public/data/questions`);
+        const snapshot = await getDocs(qRef);
+        setQuestions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        setLoadingQuestions(false);
+    };
+
+    const handleFinish = async () => {
+        let finalScore = 0;
+        questions.forEach((q, idx) => {
+            if (selectedAnswers[idx] === q.correctOptionIndex) finalScore++;
+        });
+        const pct = Math.round((finalScore / questions.length) * 100);
+        setScore(pct);
+
+        // Save result to Firebase with Supabase info
+        await addDoc(collection(db, `artifacts/${appId}/scores`), {
+            studentName: currentStudentName,
+            admissionNo: currentStudentId,
+            score: pct,
+            examDate: new Date()
+        });
+        setExamSubmitted(true);
+    };
+
+    // --- UI GATE ---
+    if (!currentStudentId) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full border">
+                    <h2 className="text-2xl font-bold mb-6 text-blue-800">CBT Admission</h2>
+                    <label className="block text-sm font-bold mb-2 text-gray-600">Enter Admission Number:</label>
+                    <input 
+                        type="text" 
+                        placeholder="MS-XXXX"
+                        className="w-full p-4 border rounded-lg mb-4 text-xl font-mono uppercase"
+                        value={studentIdInput}
+                        onChange={(e) => setStudentIdInput(e.target.value)}
+                    />
+                    <button 
+                        onClick={handleStartExam}
+                        disabled={isVerifying}
+                        className="w-full py-4 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700"
+                    >
+                        {isVerifying ? "Verifying..." : "Start Examination"}
+                    </button>
+                    <button onClick={() => setCurrentPage('home')} className="w-full mt-4 text-gray-400">Back</button>
+                </div>
+            </div>
+        );
+    }
+
+    // --- EXAM RESULTS UI ---
+    if (examSubmitted) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen">
+                <h2 className="text-3xl font-bold">Exam Completed!</h2>
+                <p className="text-xl mt-2">{currentStudentName}</p>
+                <div className="text-6xl font-bold text-blue-600 mt-4">{score}%</div>
+                <button onClick={() => setCurrentPage('home')} className="mt-8 px-6 py-2 bg-gray-800 text-white rounded">Home</button>
+            </div>
+        );
+    }
+
+    // --- QUESTION UI ---
+    return (
+        <div className="p-4 max-w-2xl mx-auto">
+            <div className="mb-4 flex justify-between font-bold text-gray-500">
+                <span>{currentStudentName}</span>
+                <span>Question {currentQuestionIndex + 1}/{questions.length}</span>
+            </div>
+            {loadingQuestions ? <p>Loading...</p> : (
+                <div className="bg-white p-6 rounded shadow border">
+                    <p className="text-lg font-semibold mb-6">{questions[currentQuestionIndex]?.questionText}</p>
+                    {questions[currentQuestionIndex]?.options.map((opt, idx) => (
+                        <button 
+                            key={idx}
+                            onClick={() => setSelectedAnswers({...selectedAnswers, [currentQuestionIndex]: idx})}
+                            className={`w-full p-4 mb-2 text-left border rounded ${selectedAnswers[currentQuestionIndex] === idx ? 'bg-blue-100 border-blue-500' : ''}`}
+                        >
+                            {opt}
+                        </button>
+                    ))}
+                    <div className="mt-6 flex justify-between">
+                        <button disabled={currentQuestionIndex === 0} onClick={() => setCurrentQuestionIndex(prev => prev - 1)}>Back</button>
+                        {currentQuestionIndex === questions.length - 1 ? 
+                            <button onClick={handleFinish} className="bg-green-600 text-white px-6 py-2 rounded">Submit</button> :
+                            <button onClick={() => setCurrentQuestionIndex(prev => prev + 1)} className="bg-blue-600 text-white px-6 py-2 rounded">Next</button>
+                        }
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
           // Fetch questions from Firestore in real-time
           React.useEffect(() => {
@@ -1105,3 +1237,4 @@ React.useEffect(() => {
 </body>
 
 </html>
+

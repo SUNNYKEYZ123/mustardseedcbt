@@ -148,40 +148,13 @@
             };
 
             const finishExam = async () => {
-    try {
-        let correct = 0;
-        
-        // Calculate the score
-        questions.forEach((q, i) => { 
-            if(answers[i] === q.correctOptionIndex) {
-                correct++; 
-            }
-        });
-
-        const pct = Math.round((correct / questions.length) * 100);
-
-        // CORRECTED PATH AND SYNTAX:
-        // 1. Use the 'scores' collection path
-        // 2. Wrap the path in fb.collection()
-        const scoresRef = fb.collection(fb.db, "artifacts/my-project-a6208/scores");
-
-        await fb.addDoc(scoresRef, {
-            studentName: student.name || student.full_name, // Support both naming styles
-            studentId: student.id, 
-            score: pct,
-            rawScore: `${correct}/${questions.length}`,
-            date: new Date()
-        });
-
-        setFinalScore(pct);
-        setFinished(true);
-        alert("Exam submitted successfully!");
-
-    } catch (error) {
-        console.error("Submission Error:", error);
-        alert("Failed to submit exam: " + error.message);
-    }
-};    setFinalScore(pct);
+                let correct = 0;
+                questions.forEach((q, i) => { if(answers[i] === q.correctOptionIndex) correct++; });
+                const pct = Math.round((correct / questions.length) * 100);
+                await fb.addDoc(fb.collection(fb.db, "scores"), {
+                    studentName: student.name, studentId: student.id, score: pct, date: new Date()
+                });
+                setFinalScore(pct);
                 setFinished(true);
             };
 

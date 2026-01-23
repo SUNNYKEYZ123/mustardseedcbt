@@ -148,47 +148,51 @@
             };
 
             const handleSubmitExam = async () => {
-  // Use the name 'student' because that's what we defined in the login
-  if (!student || !student.id) {
-    alert("Student data missing!");
-    return;
-  }
-
-  showModal("Are you sure you want to submit?", async () => {
+  // 1. Show the confirmation modal
+  showModal("Are you sure you want to submit this exam? You cannot retake it once submitted.", async () => {
+    
     let correctCount = 0;
     
-    // Calculate Score
+    // 2. Calculate the score using your specific variable names
     questions.forEach(q => {
+      // We check the selectedAnswers map using the question ID
       if (selectedAnswers[q.id] === q.correctOptionIndex) {
         correctCount++;
       }
     });
 
+    // 3. Update the React state so the "Score" shows on the screen
+    setScore(correctCount); 
+
     try {
-      // Use the FIXED path that we know works with your rules
-      const scoresCollectionRef = fb.collection(fb.db, "artifacts/my-project-a6208/scores");
-      
+      // 4. Ensure we have the student data before saving
+      if (!currentStudentId || !currentStudentName) {
+        showModal("Error: Student details missing. Please re-login.", () => {});
+        return;
+      }
+
+      // 5. Use the CORRECT PATH that matches your Firebase rules
+      const scoresPath = `artifacts/${appId}/scores`;
+      const scoresCollectionRef = fb.collection(fb.db, scoresPath);
+
       await fb.addDoc(scoresCollectionRef, {
-        studentId: student.id,
-        studentName: student.name || student.full_name,
+        studentId: currentStudentId,
+        studentName: currentStudentName,
         examDate: new Date(),
-        score: correctCount,
-        percentage: Math.round((correctCount / questions.length) * 100),
+        score: correctCount, // The number correct
         totalQuestions: questions.length,
-        // This saves the detailed breakdown
-        answers: questions.map(q => ({
-          questionText: q.questionText,
-          selectedOption: q.options[selectedAnswers[q.id]] || "No Answer",
-          isCorrect: selectedAnswers[q.id] === q.correctOptionIndex
-        }))
+        percentage: Math.round((correctCount / questions.length) * 100)
       });
 
-      setExamSubmitted(true);
-      alert(`Exam submitted! Score: ${correctCount}/${questions.length}`);
-      
+      // 6. This triggers the "Result" screen to appear
+      setExamSubmitted(true); 
+
+      // 7. Show the final score in a popup for the student
+      showModal(`Exam submitted! You scored ${correctCount} out of ${questions.length}.`, () => {});
+
     } catch (e) {
-      console.error("Error submitting exam: ", e);
-      alert("Submission failed. Check your internet and try again.");
+      console.error("Error submitting: ", e);
+      showModal("Connection error. Please try clicking submit again.", () => {});
     }
   }, true);
 };
@@ -272,6 +276,7 @@
     </script>
 </body>
 </html>
+
 
 
 

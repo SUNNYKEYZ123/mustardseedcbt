@@ -270,19 +270,13 @@ React.useEffect(() => {
         const found = data?.find(s => ("MS-" + s.id.substring(0, 5).toUpperCase()) === inputId);
 
         if (found) {
-            // --- THE HIGH GUARD: Check if they already finished ---
-            const scoreRef = fb.collection(fb.db, "scores");
-            // Look for any document where studentId matches this login
-            const q = fb.query(scoreRef, fb.where("studentId", "==", inputId));
-            const scoreSnap = await fb.getDocs(q);
-
-            if (!scoreSnap.empty) {
-                alert("ACCESS DENIED: You have already submitted this exam. Multiple attempts are not allowed.");
-                setLoading(false);
-                return; // STOP HERE - Do not load questions
-            }
-            // --- END GUARD ---
-
+            // Save the score to the exact same long path
+await fb.addDoc(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), {
+    studentId: student.id, // This matches the MS- ID
+    studentName: student.name,
+    score: pct,
+    date: new Date()
+});
             // 2. If no score found, proceed to log in and load questions
             setStudent({ name: found.full_name, id: inputId });
             const snap = await fb.getDocs(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"));
@@ -449,4 +443,5 @@ React.useEffect(() => {
     </script>
 </body>
 </html>
+
 

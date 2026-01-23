@@ -260,20 +260,42 @@ React.useEffect(() => {
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
 }, [student, finished]);
             
-            const verifyId = async () => {
-                setLoading(true);
-                const inputId = msId.toUpperCase().trim();
-                const { data } = await _supabase.from('students').select('*').eq('status', 'Enrolled');
-                //in between this right?//
-                const found = data?.find(s => ("MS-" + s.id.substring(0, 5).toUpperCase()) === inputId);
-                if (found) {
-                    setStudent({ name: found.full_name, id: inputId });
-                    const snap = await fb.getDocs(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"));
-                    setQuestions(snap.docs.map(d => ({id: d.id, ...d.data()})));
-                } else { alert("ID Not Found"); }
-                setLoading(false);
-            };
+           const verifyId = async () => {
+    setLoading(true);
+    const inputId = msId.toUpperCase().trim();
 
+    try {
+        // 1. Check Supabase for the student
+        const { data } = await _supabase.from('students').select('*').eq('status', 'Enrolled');
+        const found = data?.find(s => ("MS-" + s.id.substring(0, 5).toUpperCase()) === inputId);
+
+        if (found) {
+            // --- THE HIGH GUARD: Check if they already finished ---
+            const scoreRef = fb.collection(fb.db, "scores");
+            // Look for any document where studentId matches this login
+            const q = fb.query(scoreRef, fb.where("studentId", "==", inputId));
+            const scoreSnap = await fb.getDocs(q);
+
+            if (!scoreSnap.empty) {
+                alert("ACCESS DENIED: You have already submitted this exam. Multiple attempts are not allowed.");
+                setLoading(false);
+                return; // STOP HERE - Do not load questions
+            }
+            // --- END GUARD ---
+
+            // 2. If no score found, proceed to log in and load questions
+            setStudent({ name: found.full_name, id: inputId });
+            const snap = await fb.getDocs(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"));
+            setQuestions(snap.docs.map(d => ({id: d.id, ...d.data()})));
+        } else { 
+            alert("ID Not Found or Student not Enrolled."); 
+        }
+    } catch (error) {
+        console.error("Login error:", error);
+        alert("An error occurred during login. Please check your connection.");
+    }
+    setLoading(false);
+};
             const finishExam = async () => {
                 if (!confirm("Submit your answers?")) return;
                 let correctCount = 0;
@@ -427,3 +449,4 @@ React.useEffect(() => {
     </script>
 </body>
 </html>
+

@@ -123,6 +123,9 @@
 
         // --- STUDENT EXAM PAGE ---
         const StudentExamPage = () => {
+            const [showConfirm, setShowConfirm] = React.useState(false);
+const [showResult, setShowResult] = React.useState(false);
+const [isSubmitting, setIsSubmitting] = React.useState(false);
             const { setPage } = React.useContext(AppContext);
             const [msId, setMsId] = React.useState('');
             const [student, setStudent] = React.useState(null);
@@ -148,86 +151,92 @@
                 setLoading(false);
             };
 
-            const finishExam = async () => {
-                if (!confirm("Are you sure you want to submit?")) return;
+            const handleFinalSubmit = async () => {
+    setIsSubmitting(true);
+    let correctCount = 0;
+    questions.forEach((q, i) => {
+        if (answers[i] === q.correctOptionIndex) correctCount++;
+    });
 
-                let correctCount = 0;
-                questions.forEach((q, i) => {
-                    if (answers[i] === q.correctOptionIndex) {
-                        correctCount++;
-                    }
-                });
+    const scoreValue = `${correctCount} / ${questions.length}`;
+    setFinalScore(scoreValue);
 
-                const pct = Math.round((correctCount / questions.length) * 100);
-                setFinalScore(pct);
-
-                try {
-                    // Path must match your Firebase rules exactly
-                    const scoresPath = "artifacts/my-project-a6208/scores";
-                    await fb.addDoc(fb.collection(fb.db, scoresPath), {
-                        studentName: student.name,
-                        studentId: student.id,
-                        score: pct,
-                        correctAnswers: correctCount,
-                        totalQuestions: questions.length,
-                        date: new Date()
-                    });
-                    setFinished(true);
-                } catch (e) {
-                    console.error(e);
-                    alert("Error saving score: " + e.message);
-                }
-            };
-
+    try {
+        const scoresPath = "artifacts/my-project-a6208/scores";
+        await fb.addDoc(fb.collection(fb.db, scoresPath), {
+            studentName: student.name,
+            studentId: student.id,
+            score: scoreValue,
+            date: new Date()
+        });
+        setShowConfirm(false); // Close confirm modal
+        setShowResult(true);   // Open result modal
+    } catch (e) {
+        alert("Error: " + e.message);
+    }
+    setIsSubmitting(false);
+};
             if (finished) return (
-                <div className="flex flex-col items-center justify-center min-h-screen">
-                    <h1 className="text-6xl font-black text-blue-600">{finalScore}%</h1>
-                    <p className="text-xl mt-4">Great work, {student.name}!</p>
-                    <button onClick={() => setPage('home')} className="mt-8 bg-black text-white px-10 py-3 rounded-full">Exit</button>
-                </div>
-            );
+    <div className="max-w-2xl mx-auto p-6 pt-12 relative">
+        {/* Main Exam UI */}
+        <div className="flex justify-between mb-8 font-bold text-blue-600">
+            <span>{student.name}</span>
+            <span>{index + 1} / {questions.length}</span>
+        </div>
+        
+        <div className="bg-white p-8 rounded-2xl shadow-sm border">
+            <p className="text-xl font-bold mb-8">{questions[index].questionText}</p>
+            <div className="space-y-3">
+                {questions[index].options.map((opt, i) => (
+                    <button key={i} onClick={() => setAnswers({...answers, [index]: i})} 
+                        className={`w-full p-5 text-left rounded-xl border-2 transition ${answers[index] === i ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border-gray-100'}`}>
+                        {optionLetters[i]}. {opt}
+                    </button>
+                ))}
+            </div>
+            <div className="mt-10 flex justify-between">
+                <button onClick={() => setIndex(i => i - 1)} disabled={index === 0} className="text-gray-400">Back</button>
+                {index === questions.length - 1 ? 
+                    <button onClick={() => setShowConfirm(true)} className="bg-green-600 text-white px-10 py-3 rounded-xl font-bold">Submit Exam</button> :
+                    <button onClick={() => setIndex(i => i + 1)} className="bg-blue-600 text-white px-10 py-3 rounded-xl font-bold">Next</button>
+                }
+            </div>
+        </div>
 
-            if (!student) return (
-                <div className="flex items-center justify-center min-h-screen">
-                    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm border">
-                        <h2 className="text-2xl font-bold mb-6">Student Login</h2>
-                        <input className="w-full p-4 border rounded-xl mb-4 uppercase" placeholder="MS-XXXXX" onChange={e => setMsId(e.target.value)} />
-                        <button onClick={verifyId} className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold">{loading ? "Wait..." : "Start Exam"}</button>
-                        <button onClick={() => setPage('home')} className="w-full mt-4 text-gray-400">Cancel</button>
+        {/* CONFIRMATION MODAL */}
+        {showConfirm && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white p-8 rounded-2xl max-w-sm w-full text-center shadow-2xl">
+                    <h2 className="text-2xl font-bold mb-4">Submit Exam?</h2>
+                    <p className="text-gray-600 mb-8">Are you sure? You cannot change your answers after this.</p>
+                    <div className="flex gap-4">
+                        <button onClick={() => setShowConfirm(false)} className="flex-1 py-3 border rounded-xl">Cancel</button>
+                        <button onClick={handleFinalSubmit} className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold">
+                            {isSubmitting ? "Saving..." : "Yes, Submit"}
+                        </button>
                     </div>
                 </div>
-            );
+            </div>
+        )}
 
-            if (questions.length === 0) return <div className="p-20 text-center font-bold">Getting Questions Ready...</div>;
-
-            return (
-                <div className="max-w-2xl mx-auto p-6 pt-12">
-                    <div className="flex justify-between mb-8 font-bold text-blue-600">
-                        <span>{student.name}</span>
-                        <span>{index + 1} / {questions.length}</span>
+        {/* FINAL RESULT MODAL */}
+        {showResult && (
+            <div className="fixed inset-0 bg-blue-600 flex items-center justify-center p-4 z-[60]">
+                <div className="bg-white p-10 rounded-3xl max-w-sm w-full text-center shadow-2xl scale-110 transition-transform">
+                    <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
                     </div>
-                    <div className="bg-white p-8 rounded-2xl shadow-sm border">
-                        <p className="text-xl font-bold mb-8">{questions[index].questionText}</p>
-                        <div className="space-y-3">
-                            {questions[index].options.map((opt, i) => (
-                                <button key={i} onClick={() => setAnswers({...answers, [index]: i})} 
-                                className={`w-full p-5 text-left rounded-xl border-2 transition ${answers[index] === i ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border-gray-100'}`}>
-                                    {optionLetters[i]}. {opt}
-                                </button>
-                            ))}
-                        </div>
-                        <div className="mt-10 flex justify-between">
-                            <button onClick={() => setIndex(i => i - 1)} disabled={index === 0} className="text-gray-500">Back</button>
-                            {index === questions.length - 1 ? 
-                                <button onClick={finishExam} className="bg-green-600 text-white px-10 py-3 rounded-xl font-bold">Finish</button> :
-                                <button onClick={() => setIndex(i => i + 1)} className="bg-blue-600 text-white px-10 py-3 rounded-xl font-bold">Next</button>
-                            }
-                        </div>
-                    </div>
+                    <h2 className="text-gray-500 font-bold uppercase tracking-widest text-sm mb-2">Your Final Score</h2>
+                    <div className="text-6xl font-black text-black mb-4">{finalScore}</div>
+                    <p className="text-gray-600 mb-8 font-medium">Excellent effort, {student.name}!</p>
+                    <button onClick={() => setPage('home')} className="w-full py-4 bg-black text-white rounded-2xl font-bold hover:bg-gray-800 transition">
+                        Close & Logout
+                    </button>
                 </div>
-            );
-        };
-
+            </div>
+        )}
+    </div>
+);
         const App = () => {
             const [page, setPage] = React.useState('home');
             const [ready, setReady] = React.useState(false);
@@ -259,3 +268,4 @@
     </script>
 </body>
 </html>
+

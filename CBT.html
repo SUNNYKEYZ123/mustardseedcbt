@@ -79,7 +79,27 @@
                 setNewQ({ text: '', options: ['', '', '', ''], correct: 0 });
                 alert("Question Added!");
             };
-
+const deleteAllScores = async () => {
+                const count = scores.length;
+                if (count === 0) return alert("No scores to delete!");
+                
+                const confirmClear = confirm(`WARNING: This will permanently delete ALL ${count} scores. This cannot be undone! Are you sure?`);
+                
+                if (confirmClear) {
+                    try {
+                        // We loop through the current scores in the state and delete each one
+                        const deletePromises = scores.map(s => 
+                            fb.deleteDoc(fb.doc(fb.db, "artifacts/my-project-a6208/scores", s.id))
+                        );
+                        
+                        await Promise.all(deletePromises);
+                        alert(`Success: ${count} scores have been cleared.`);
+                    } catch (e) {
+                        console.error(e);
+                        alert("Error clearing scores: " + e.message);
+                    }
+                }
+            };
             const deleteScore = async (id) => {
     if (!confirm("Are you sure you want to delete this student's score? This cannot be undone.")) return;
     
@@ -91,6 +111,7 @@
         alert("Failed to delete: " + e.message);
     }
 };
+            
 
             if (!auth) return (
                 <div className="flex flex-col items-center justify-center min-h-screen">
@@ -293,6 +314,7 @@
     </script>
 </body>
 </html>
+
 
 
 

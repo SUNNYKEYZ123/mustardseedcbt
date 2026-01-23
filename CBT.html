@@ -100,57 +100,50 @@
                         <button onClick={() => setPage('home')} className="text-blue-600 font-bold">← Back Home</button>
                         <h1 className="text-2xl font-black">Admin Dashboard</h1>
                     </div>
-                    
                     <section className="bg-white p-6 rounded-xl shadow border">
-                        <h2 className="text-xl font-bold mb-4">Add Question</h2>
-                        <textarea className="w-full p-3 border rounded mb-4" placeholder="Question Text" value={newQ.text} onChange={e => setNewQ({...newQ, text: e.target.value})} />
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                            {newQ.options.map((o, i) => (
-                                <input key={i} className="p-2 border rounded" placeholder={`Option ${optionLetters[i]}`} value={o} 
-                                onChange={e => { let n = [...newQ.options]; n[i] = e.target.value; setNewQ({...newQ, options: n}) }} />
-                            ))}
-                        </div>
-                        <select className="w-full p-3 border rounded mb-4" value={newQ.correct} onChange={e => setNewQ({...newQ, correct: e.target.value})}>
-                            {optionLetters.map((l, i) => <option key={i} value={i}>Correct: {l}</option>)}
-                        </select>
-                        <button onClick={addQuestion} className="w-full bg-green-600 text-white py-3 rounded font-bold">Save Question</button>
-                    </section>
-
-                    <section className="bg-white p-6 rounded-xl shadow border">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-bold">Recent Scores ({scores.length})</h2>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left">
-                                <thead>
-                                    <tr className="border-b text-gray-400 text-sm uppercase">
-                                        <th className="pb-3">Student Name</th>
-                                        <th className="pb-3">Student ID</th>
-                                        <th className="pb-3">Raw Score</th>
-                                        <th className="pb-3">Percentage</th>
-                                        <th className="pb-3">Time Submitted</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {scores.map(s => (
-                                        <tr key={s.id} className="border-b hover:bg-gray-50">
-                                            <td className="py-4 font-semibold">{s.studentName}</td>
-                                            <td className="py-4 text-gray-600">{s.studentId}</td>
-                                            <td className="py-4 font-bold text-blue-600">
-                                                {s.correctAnswers !== undefined ? `${s.correctAnswers} / ${s.totalQuestions}` : 'N/A'}
-                                            </td>
-                                            <td className="py-4 font-bold text-green-600">{s.score}%</td>
-                                            <td className="py-4 text-sm text-gray-500">
-                                                {s.date?.toDate ? s.date.toDate().toLocaleString([], { 
-                                                    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
-                                                }) : 'Recent'}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
+    <h2 className="text-xl font-bold mb-4">Recent Scores ({scores.length})</h2>
+    <div className="overflow-x-auto">
+        <table className="w-full text-left">
+            <thead>
+                <tr className="border-b text-gray-400 text-sm uppercase">
+                    <th className="pb-3">Student Name</th>
+                    <th className="pb-3">Student ID</th>
+                    <th className="pb-3 text-center">Score</th>
+                    <th className="pb-3">Time Submitted</th>
+                    <th className="pb-3 text-right">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {scores.map(s => (
+                    <tr key={s.id} className="border-b hover:bg-gray-50">
+                        <td className="py-4 font-semibold">{s.studentName}</td>
+                        <td className="py-4 text-gray-600">{s.studentId}</td>
+                        <td className="py-4 font-bold text-center">
+                             <div className="text-blue-600">{s.correctAnswers} / {s.totalQuestions}</div>
+                             <div className="text-xs text-green-600">{s.score}%</div>
+                        </td>
+                        <td className="py-4 text-sm text-gray-500">
+                            {s.date?.toDate ? s.date.toDate().toLocaleString([], { 
+                                month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+                            }) : 'Recent'}
+                        </td>
+                        <td className="py-4 text-right">
+                            <button 
+                                onClick={() => deleteScore(s.id)}
+                                className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition"
+                                title="Delete Score"
+                            >
+                                <svg className="w-5 h-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    </div>
+</section>
                 </div>
             );
         };
@@ -292,5 +285,6 @@
     </script>
 </body>
 </html>
+
 
 

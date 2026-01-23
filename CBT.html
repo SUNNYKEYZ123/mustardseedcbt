@@ -331,7 +331,11 @@
             if (questions.length === 0) return <div className="p-20 text-center font-bold">Pls Wait, Getting Your Question Ready!!.</div>;
 
             return (
-                <div className="max-w-2xl mx-auto p-6 pt-12">
+                <div 
+                    className="max-w-2xl mx-auto p-6 pt-12"
+                    onContextMenu={(e) => e.preventDefault()} // Blocks Right-Click
+                    onCopy={(e) => e.preventDefault()}        // Blocks Copying
+                >
                     <div className="fixed top-0 left-0 w-full h-1.5 bg-gray-200 z-50">
     <div 
         className="h-full bg-blue-600 transition-all duration-500 ease-out"

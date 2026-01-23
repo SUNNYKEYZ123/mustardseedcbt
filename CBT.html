@@ -371,7 +371,7 @@
                         <div className="mt-10 flex justify-between">
                             <button onClick={() => setIndex(i => i - 1)} disabled={index === 0} className="text-gray-400 font-bold">Back</button>
                             {index === questions.length - 1 ? 
-                                <button onClick={finishExam} className="bg-green-600 text-white px-10 py-3 rounded-xl font-bold shadow-lg">Finish Exam</button> :
+                                <button onClick={finishExam} className="bg-green-600 text-white px-10 py-3 rounded-xl font-bold shadow-lg">Submit Exam</button> :
                                 <button onClick={() => setIndex(i => i + 1)} className="bg-blue-600 text-white px-10 py-3 rounded-xl font-bold shadow-lg">Next Question</button>
                             }
                         </div>
@@ -408,6 +408,7 @@
     </script>
 </body>
 </html>
+
 
 
 

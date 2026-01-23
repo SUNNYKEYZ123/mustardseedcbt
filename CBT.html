@@ -141,61 +141,44 @@
                 const found = data?.find(s => ("MS-" + s.id.substring(0, 5).toUpperCase()) === inputId);
                 if (found) {
                     setStudent({ name: found.full_name, id: inputId });
+                    // Fetch questions from the specific path required by your rules
                     const snap = await fb.getDocs(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"));
                     setQuestions(snap.docs.map(d => ({id: d.id, ...d.data()})));
                 } else { alert("ID Not Found"); }
                 setLoading(false);
             };
 
-            const handleSubmitExam = async () => {
-  // 1. Show the confirmation modal
-  showModal("Are you sure you want to submit this exam? You cannot retake it once submitted.", async () => {
-    
-    let correctCount = 0;
-    
-    // 2. Calculate the score using your specific variable names
-    questions.forEach(q => {
-      // We check the selectedAnswers map using the question ID
-      if (selectedAnswers[q.id] === q.correctOptionIndex) {
-        correctCount++;
-      }
-    });
+            const finishExam = async () => {
+                if (!confirm("Are you sure you want to submit?")) return;
 
-    // 3. Update the React state so the "Score" shows on the screen
-    setScore(correctCount); 
+                let correctCount = 0;
+                questions.forEach((q, i) => {
+                    if (answers[i] === q.correctOptionIndex) {
+                        correctCount++;
+                    }
+                });
 
-    try {
-      // 4. Ensure we have the student data before saving
-      if (!currentStudentId || !currentStudentName) {
-        showModal("Error: Student details missing. Please re-login.", () => {});
-        return;
-      }
+                const pct = Math.round((correctCount / questions.length) * 100);
+                setFinalScore(pct);
 
-      // 5. Use the CORRECT PATH that matches your Firebase rules
-      const scoresPath = `artifacts/${appId}/scores`;
-      const scoresCollectionRef = fb.collection(fb.db, scoresPath);
+                try {
+                    // Path must match your Firebase rules exactly
+                    const scoresPath = "artifacts/my-project-a6208/scores";
+                    await fb.addDoc(fb.collection(fb.db, scoresPath), {
+                        studentName: student.name,
+                        studentId: student.id,
+                        score: pct,
+                        correctAnswers: correctCount,
+                        totalQuestions: questions.length,
+                        date: new Date()
+                    });
+                    setFinished(true);
+                } catch (e) {
+                    console.error(e);
+                    alert("Error saving score: " + e.message);
+                }
+            };
 
-      await fb.addDoc(scoresCollectionRef, {
-        studentId: currentStudentId,
-        studentName: currentStudentName,
-        examDate: new Date(),
-        score: correctCount, // The number correct
-        totalQuestions: questions.length,
-        percentage: Math.round((correctCount / questions.length) * 100)
-      });
-
-      // 6. This triggers the "Result" screen to appear
-      setExamSubmitted(true); 
-
-      // 7. Show the final score in a popup for the student
-      showModal(`Exam submitted! You scored ${correctCount} out of ${questions.length}.`, () => {});
-
-    } catch (e) {
-      console.error("Error submitting: ", e);
-      showModal("Connection error. Please try clicking submit again.", () => {});
-    }
-  }, true);
-};
             if (finished) return (
                 <div className="flex flex-col items-center justify-center min-h-screen">
                     <h1 className="text-6xl font-black text-blue-600">{finalScore}%</h1>
@@ -234,7 +217,7 @@
                             ))}
                         </div>
                         <div className="mt-10 flex justify-between">
-                            <button onClick={() => setIndex(i => i - 1)} disabled={index === 0}>Back</button>
+                            <button onClick={() => setIndex(i => i - 1)} disabled={index === 0} className="text-gray-500">Back</button>
                             {index === questions.length - 1 ? 
                                 <button onClick={finishExam} className="bg-green-600 text-white px-10 py-3 rounded-xl font-bold">Finish</button> :
                                 <button onClick={() => setIndex(i => i + 1)} className="bg-blue-600 text-white px-10 py-3 rounded-xl font-bold">Next</button>
@@ -276,11 +259,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-

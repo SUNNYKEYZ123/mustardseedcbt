@@ -80,9 +80,17 @@
                 alert("Question Added!");
             };
 
-            const deleteQuestion = async (id) => {
-                await fb.deleteDoc(fb.doc(fb.db, "artifacts/my-project-a6208/public/data/questions", id));
-            };
+            const deleteScore = async (id) => {
+    if (!confirm("Are you sure you want to delete this student's score? This cannot be undone.")) return;
+    
+    try {
+        await fb.deleteDoc(fb.doc(fb.db, "artifacts/my-project-a6208/scores", id));
+        alert("Score deleted successfully!");
+    } catch (e) {
+        console.error("Error deleting score:", e);
+        alert("Failed to delete: " + e.message);
+    }
+};
 
             if (!auth) return (
                 <div className="flex flex-col items-center justify-center min-h-screen">
@@ -285,6 +293,7 @@
     </script>
 </body>
 </html>
+
 
 
 

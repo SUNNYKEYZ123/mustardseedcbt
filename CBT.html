@@ -244,6 +244,18 @@
             const [loading, setLoading] = React.useState(false);
             const [finished, setFinished] = React.useState(false);
             const [finalScore, setFinalScore] = React.useState(0);
+// --- GUARD: Tab Switch / Cheating Detector ---
+React.useEffect(() => {
+    const handleVisibilityChange = () => {
+        if (document.hidden && student && !finished) {
+            // Option 1: Just Alert
+            alert("WARNING: You are not allowed to leave this tab! This incident has been recorded.");
+            
+            // Option 2: Automatic Submit (Uncomment the line below to enable)
+            // finishExam(); 
+        }
+    };
+
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
 }, [student, finished]);
@@ -415,10 +427,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-

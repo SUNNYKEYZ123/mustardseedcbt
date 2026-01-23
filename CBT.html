@@ -147,17 +147,51 @@
                 setLoading(false);
             };
 
-            const finishExam = async () => {
-                let correct = 0;
-                questions.forEach((q, i) => { if(answers[i] === q.correctOptionIndex) correct++; });
-                const pct = Math.round((correct / questions.length) * 100);
-                await fb.addDoc(fb.collection(fb.db, "scores"), {
-                    studentName: student.name, studentId: student.id, score: pct, date: new Date()
-                });
-                setFinalScore(pct);
-                setFinished(true);
-            };
+            const handleSubmitExam = async () => {
+  // Use the name 'student' because that's what we defined in the login
+  if (!student || !student.id) {
+    alert("Student data missing!");
+    return;
+  }
 
+  showModal("Are you sure you want to submit?", async () => {
+    let correctCount = 0;
+    
+    // Calculate Score
+    questions.forEach(q => {
+      if (selectedAnswers[q.id] === q.correctOptionIndex) {
+        correctCount++;
+      }
+    });
+
+    try {
+      // Use the FIXED path that we know works with your rules
+      const scoresCollectionRef = fb.collection(fb.db, "artifacts/my-project-a6208/scores");
+      
+      await fb.addDoc(scoresCollectionRef, {
+        studentId: student.id,
+        studentName: student.name || student.full_name,
+        examDate: new Date(),
+        score: correctCount,
+        percentage: Math.round((correctCount / questions.length) * 100),
+        totalQuestions: questions.length,
+        // This saves the detailed breakdown
+        answers: questions.map(q => ({
+          questionText: q.questionText,
+          selectedOption: q.options[selectedAnswers[q.id]] || "No Answer",
+          isCorrect: selectedAnswers[q.id] === q.correctOptionIndex
+        }))
+      });
+
+      setExamSubmitted(true);
+      alert(`Exam submitted! Score: ${correctCount}/${questions.length}`);
+      
+    } catch (e) {
+      console.error("Error submitting exam: ", e);
+      alert("Submission failed. Check your internet and try again.");
+    }
+  }, true);
+};
             if (finished) return (
                 <div className="flex flex-col items-center justify-center min-h-screen">
                     <h1 className="text-6xl font-black text-blue-600">{finalScore}%</h1>
@@ -238,6 +272,7 @@
     </script>
 </body>
 </html>
+
 
 
 

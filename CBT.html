@@ -233,64 +233,91 @@
             );
         };
 
-        // --- STUDENT EXAM PAGE ---
         const StudentExamPage = () => {
-            const { setPage } = React.useContext(AppContext);
-            const [msId, setMsId] = React.useState('');
-            const [student, setStudent] = React.useState(null);
-            const [questions, setQuestions] = React.useState([]);
-            const [index, setIndex] = React.useState(0);
-            const [answers, setAnswers] = React.useState({});
-            const [loading, setLoading] = React.useState(false);
-            const [finished, setFinished] = React.useState(false);
-            const [finalScore, setFinalScore] = React.useState(0);
-// --- GUARD: Tab Switch / Cheating Detector ---
-React.useEffect(() => {
-    const handleVisibilityChange = () => {
-        if (document.hidden && student && !finished) {
-            // Option 1: Just Alert
-            alert("WARNING: You are not allowed to leave this tab! This incident has been recorded.");
-            
-            // Option 2: Automatic Submit (Uncomment the line below to enable)
-            // finishExam(); 
+    const { setPage } = React.useContext(AppContext);
+    const [msId, setMsId] = React.useState('');
+    const [student, setStudent] = React.useState(null);
+    const [questions, setQuestions] = React.useState([]);
+    const [index, setIndex] = React.useState(0);
+    const [answers, setAnswers] = React.useState({});
+    const [loading, setLoading] = React.useState(false);
+    const [finished, setFinished] = React.useState(false);
+    const [finalScore, setFinalScore] = React.useState(0);
+
+    // --- 1. THE FINISH FUNCTION ---
+    async function finishExam(isAuto = false) {
+        if (!isAuto) {
+            if (!confirm("Submit your answers?")) return;
         }
+
+        let correctCount = 0;
+        questions.forEach((q, i) => { 
+            if (answers[i] === q.correctOptionIndex) correctCount++; 
+        });
+        
+        const pct = Math.round((correctCount / questions.length) * 100);
+        setFinalScore(pct);
+
+        try {
+            await fb.addDoc(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), {
+                studentName: student.name, 
+                studentId: student.id,
+                score: pct, 
+                correctAnswers: correctCount,
+                totalQuestions: questions.length, 
+                date: new Date()
+            });
+            setFinished(true);
+        } catch (e) { 
+            alert("Error saving score: " + e.message); 
+        }
+    }
+
+    // --- 2. THE TAB-SWITCH GUARD (ONLY ONE!) ---
+    React.useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.hidden && student && !finished) {
+                alert("SECURITY VIOLATION: Tab switching detected. Your exam is being submitted now.");
+                finishExam(true); 
+            }
+        };
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+    }, [student, finished, questions, answers]);
+
+    // --- 3. THE LOGIN FUNCTION (ONLY ONE!) ---
+    const verifyId = async () => {
+        setLoading(true);
+        const inputId = msId.toUpperCase().trim();
+
+        try {
+            const { data } = await _supabase.from('students').select('*').eq('status', 'Enrolled');
+            const found = data?.find(s => ("MS-" + s.id.substring(0, 5).toUpperCase()) === inputId);
+
+            if (found) {
+                const scorePath = "artifacts/my-project-a6208/scores";
+                const scoreRef = fb.collection(fb.db, scorePath);
+                const q = fb.query(scoreRef, fb.where("studentId", "==", inputId));
+                const scoreSnap = await fb.getDocs(q);
+
+                if (!scoreSnap.empty) {
+                    alert("ACCESS DENIED: You have already submitted this exam.");
+                    setLoading(false);
+                    return;
+                }
+
+                setStudent({ name: found.full_name, id: inputId });
+                const snap = await fb.getDocs(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"));
+                setQuestions(snap.docs.map(d => ({id: d.id, ...d.data()})));
+            } else {
+                alert("ID Not Found or Student not Enrolled.");
+            }
+        } catch (error) {
+            console.error("Login error:", error);
+            alert("Login Error: " + error.message);
+        }
+        setLoading(false);
     };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-}, [student, finished]);
-            
-            const verifyId = async () => {
-                setLoading(true);
-                const inputId = msId.toUpperCase().trim();
-                const { data } = await _supabase.from('students').select('*').eq('status', 'Enrolled');
-                //in between this right?//
-                const found = data?.find(s => ("MS-" + s.id.substring(0, 5).toUpperCase()) === inputId);
-                if (found) {
-                    setStudent({ name: found.full_name, id: inputId });
-                    const snap = await fb.getDocs(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"));
-                    setQuestions(snap.docs.map(d => ({id: d.id, ...d.data()})));
-                } else { alert("ID Not Found"); }
-                setLoading(false);
-            };
-
-            const finishExam = async () => {
-                if (!confirm("Submit your answers?")) return;
-                let correctCount = 0;
-                questions.forEach((q, i) => { if (answers[i] === q.correctOptionIndex) correctCount++; });
-                const pct = Math.round((correctCount / questions.length) * 100);
-                setFinalScore(pct);
-
-                try {
-                    await fb.addDoc(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), {
-                        studentName: student.name, studentId: student.id,
-                        score: pct, correctAnswers: correctCount,
-                        totalQuestions: questions.length, date: new Date()
-                    });
-                    setFinished(true);
-                } catch (e) { alert("Error: " + e.message); }
-            };
-
            if (finished) return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center">
         <div className="bg-white p-10 rounded-3xl shadow-2xl border w-full max-w-md">
@@ -427,4 +454,5 @@ React.useEffect(() => {
     </script>
 </body>
 </html>
+
 

@@ -272,6 +272,28 @@ const toggleExam = async () => {
 
         const StudentExamPage = () => {
     const { setPage } = React.useContext(AppContext);
+            const [isLive, setIsLive] = React.useState(null);
+
+React.useEffect(() => {
+    const statusRef = fb.doc(fb.db, "artifacts/my-project-a6208/settings", "examControl");
+    const unsub = fb.onSnapshot(statusRef, (doc) => {
+        if (doc.exists()) setIsLive(doc.data().isLive);
+        else setIsLive(false); // Default to off if doc doesn't exist
+    });
+    return () => unsub();
+}, []);
+
+// BLOCKER RENDER
+if (isLive === false) return (
+    <div className="flex flex-col items-center justify-center min-h-screen text-center p-6">
+        <div className="bg-white p-12 rounded-3xl shadow-2xl border max-w-md">
+            <div className="text-6xl mb-6 animate-pulse">🔒</div>
+            <h1 className="text-3xl font-black text-gray-800 mb-4">EXAM CLOSED</h1>
+            <p className="text-gray-500 font-medium">The administrator has not started the session or the exam has ended. Please wait for further instructions.</p>
+            <button onClick={() => window.location.reload()} className="mt-8 text-blue-600 font-bold underline">Check Again</button>
+        </div>
+    </div>
+);
     const [msId, setMsId] = React.useState('');
     const [student, setStudent] = React.useState(null);
     const [questions, setQuestions] = React.useState([]);
@@ -537,6 +559,7 @@ const toggleExam = async () => {
     </script>
 </body>
 </html>
+
 
 
 

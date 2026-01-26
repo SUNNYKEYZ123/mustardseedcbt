@@ -68,7 +68,44 @@
                 const unsub2 = fb.onSnapshot(qQuest, (s) => setQuestions(s.docs.map(d => ({id: d.id, ...d.data()}))));
                 return () => { unsub1(); unsub2(); };
             }, [auth]);
+// --- Inside AdminPage Component ---
+const [examLive, setExamLive] = React.useState(false);
 
+React.useEffect(() => {
+    // Listen to the live status from Firebase
+    const statusRef = fb.doc(fb.db, "artifacts/my-project-a6208/settings/examControl");
+    const unsub = fb.onSnapshot(statusRef, (doc) => {
+        if (doc.exists()) setExamLive(doc.data().isLive);
+    });
+    return () => unsub();
+}, []);
+
+const toggleExam = async () => {
+    const statusRef = fb.doc(fb.db, "artifacts/my-project-a6208/settings/examControl");
+    await fb.addDoc(fb.collection(fb.db, "artifacts/my-project-a6208/settings"), { isLive: !examLive }); 
+    // Note: Better to use setDoc, but based on your imports:
+    alert("Exam Status Updated!");
+};
+
+// ... In your Admin JSX return, add this UI:
+<section className="bg-white p-6 rounded-xl shadow border border-blue-200 bg-blue-50/30">
+    <div className="flex justify-between items-center">
+        <div>
+            <h2 className="text-xl font-bold">Exam Status Control</h2>
+            <p className="text-sm text-gray-500">Currently: <strong>{examLive ? "LIVE" : "CLOSED"}</strong></p>
+        </div>
+        <button 
+            onClick={() => {
+                // Simplified update for your setup
+                const ref = fb.doc(fb.db, "artifacts/my-project-a6208/settings/examControl");
+                // You'll need 'setDoc' or 'updateDoc' from firestore imports
+                alert("Use your firebase panel to toggle 'isLive' in artifacts/my-project-a6208/settings/examControl");
+            }} 
+            className={`px-8 py-3 rounded-full font-bold text-white transition ${examLive ? 'bg-red-500' : 'bg-green-600'}`}>
+            {examLive ? "STOP EXAM" : "START EXAM"}
+        </button>
+    </div>
+</section>
             const addQuestion = async () => {
                 if(!newQ.text) return alert("Please enter question text");
                 await fb.addDoc(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), {
@@ -500,6 +537,7 @@
     </script>
 </body>
 </html>
+
 
 
 

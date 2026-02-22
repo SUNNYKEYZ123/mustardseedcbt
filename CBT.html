@@ -258,27 +258,52 @@
                 setLoading(true);
                 const inputId = msId.toUpperCase().trim();
                 try {
-                    const { data } = await _supabase.from('students').select('*').eq('status', 'Enrolled');
-                    const found = data?.find(s => ("MS-" + s.id.substring(0, 5).toUpperCase()) === inputId);
+                    // 1. Get all enrolled students
+                    const { data, error } = await _supabase.from('students').select('*').eq('status', 'Enrolled');
+                    
+                    // 2. Find student by matching the suffix of the ID (more reliable)
+                    const found = data?.find(s => {
+                        const studentIdFull = "MS-" + s.id.toString().toUpperCase();
+                        return studentIdFull.includes(inputId.replace("MS-", ""));
+                    });
+
                     if (found) {
-                                                              const scoreSnap = await fb.getDocs(fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), fb.where("studentId", "==", inputId)));
-                        if (!scoreSnap.empty) { setModal({title: "Already Taken", message: "You have already submitted this exam.", onConfirm: () => setModal(null)}); setLoading(false); return; }
+                        // 3. Check if they already submitted
+                        const scoreSnap = await fb.getDocs(fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), fb.where("studentId", "==", inputId)));
+                        if (!scoreSnap.empty) { 
+                            setModal({title: "Already Taken", message: "You have already submitted this exam.", onConfirm: () => setModal(null)}); 
+                            setLoading(false); 
+                            return; 
+                        }
                         
-                        // FIXED: Using grade_level consistently
-                        setStudent({ name: found.full_name, id: inputId, grade_level: found.grade_level });
-                        const qSnap = await fb.getDocs(fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), fb.where("grade_level", "==", found.grade_level)));
+                        // 4. Use the correct column name from your Supabase
+                        const studentClass = found.grade_level || found.class; 
+                        setStudent({ name: found.full_name, id: inputId, grade_level: studentClass });
+
+                        // 5. Fetch questions matching that exact class name
+                        const qSnap = await fb.getDocs(fb.query(
+                            fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), 
+                            fb.where("grade_level", "==", studentClass)
+                        ));
                         
-                        if(qSnap.empty) setModal({title: "No Exam", message: "No questions available for your class yet.", onConfirm: () => setModal(null)});
-                        else setQuestions(qSnap.docs.map(d => ({id: d.id, ...d.data()})));
-                    } else setModal({title: "Invalid ID", message: "Student ID not found or not enrolled.", onConfirm: () => setModal(null)});
-                } catch (e) { alert(e.message); }
+                        if(qSnap.empty) {
+                            setModal({title: "No Questions", message: `No questions found for ${studentClass}. Please check Admin Bank.`, onConfirm: () => setModal(null)});
+                        } else {
+                            setQuestions(qSnap.docs.map(d => ({id: d.id, ...d.data()})));
+                        }
+                    } else {
+                        setModal({title: "Invalid ID", message: "Student ID not found. Check your ID card.", onConfirm: () => setModal(null)});
+                    }
+                } catch (e) { 
+                    setModal({title: "System Error", message: e.message, onConfirm: () => setModal(null)});
+                }
                 setLoading(false);
             };
 
             const handleSubmit = async (isAuto = false) => {
                 let correctCount = 0;
                 questions.forEach((q, i) => { if (answers[i] === q.correctOptionIndex) correctCount++; });
-                const pct = Math.round((correctCount / questions.length) * 100);
+                const pct = questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 0;
                 setFinalScore(pct);
                 await fb.addDoc(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), {
                     studentName: student.name, studentId: student.id, grade_level: student.grade_level,
@@ -288,6 +313,7 @@
                 setModal(null);
             };
 
+            // ... (rest of your design code for finished and student exam screens stays the same)
             if (finished) return (
                 <div className="flex flex-col items-center justify-center min-h-screen text-center p-6 bg-slate-50">
                     <div className="bg-white p-12 rounded-3xl shadow-2xl border w-full max-w-sm">
@@ -372,3 +398,4 @@
     </script>
 </body>
 </html>
+

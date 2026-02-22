@@ -4,7 +4,7 @@
     <link rel="icon" type="image/x-icon" href="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mustard Seed CBT</title>
+    <title>Mustard Seed CBT - Unified Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -12,15 +12,16 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
         .custom-modal-overlay { background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
+        .sidebar-active { background: #2563eb; color: white; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4); }
     </style>
 </head>
-<body class="bg-gray-50">
+<body class="bg-gray-50 text-slate-900">
     <div id="root"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, onSnapshot, query, where, setDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, onSnapshot, query, where, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDOO3uHmzOuAxJcdLxu-OImzlH12A6FpeY",
@@ -35,7 +36,7 @@
         window.fb = {
             db: getFirestore(app),
             auth: getAuth(app),
-            collection, addDoc, getDocs, doc, deleteDoc, onSnapshot, query, where, signInAnonymously, onAuthStateChanged, setDoc, writeBatch
+            collection, addDoc, getDocs, doc, deleteDoc, onSnapshot, query, where, signInAnonymously, setDoc
         };
     </script>
 
@@ -46,109 +47,162 @@
         const _supabase = createClient(SB_URL, SB_KEY);
 
         const AppContext = React.createContext(null);
-        const ADMIN_PASSWORD = 'SUNNYKEYZ2025@';
-        const optionLetters = ['A', 'B', 'C', 'D'];
-        const GRADE_LEVELS = ['JSS 1', 'JSS 2', 'JSS 3', 'SSS 1', 'SSS 2', 'SSS 3'];
+        const ADMIN_PASS = 'SUNNYKEYZ2025@';
+        const CLASSES = ['JSS 1', 'JSS 2', 'JSS 3', 'SSS 1', 'SSS 2', 'SSS 3'];
+        const LETTERS = ['A', 'B', 'C', 'D'];
 
-        const CustomModal = ({ title, message, onConfirm, onCancel, confirmText = "Confirm" }) => (
-            <div className="fixed inset-0 z-50 flex items-center justify-center custom-modal-overlay p-4">
-                <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center">
-                    <h3 className="text-xl font-black mb-2 uppercase">{title}</h3>
-                    <p className="text-gray-500 font-medium mb-6">{message}</p>
+        const Modal = ({ title, message, onConfirm, onCancel, confirmText = "OK" }) => (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center custom-modal-overlay p-4">
+                <div className="bg-white rounded-[32px] p-8 max-w-sm w-full shadow-2xl text-center border">
+                    <h3 className="text-xl font-black mb-2 uppercase tracking-tight">{title}</h3>
+                    <p className="text-gray-500 font-medium mb-6 leading-relaxed">{message}</p>
                     <div className="flex gap-3">
-                        {onCancel && <button onClick={onCancel} className="flex-1 py-3 font-bold border rounded-xl hover:bg-gray-50">Cancel</button>}
-                        <button onClick={onConfirm} className="flex-1 py-3 font-bold bg-blue-600 text-white rounded-xl hover:bg-blue-700">{confirmText}</button>
+                        {onCancel && <button onClick={onCancel} className="flex-1 py-4 font-bold border rounded-2xl hover:bg-gray-50 transition">Cancel</button>}
+                        <button onClick={onConfirm} className="flex-1 py-4 font-bold bg-blue-600 text-white rounded-2xl hover:bg-blue-700 shadow-lg shadow-blue-200">{confirmText}</button>
                     </div>
                 </div>
             </div>
         );
 
-        // --- ADMIN PAGE (No Changes Needed) ---
-        const AdminPage = () => {
+        const AdminPanel = () => {
             const { setPage } = React.useContext(AppContext);
+            const [tab, setTab] = React.useState('dash');
             const [auth, setAuth] = React.useState(false);
-            const [pass, setPass] = React.useState('');
-            const [activeTab, setActiveTab] = React.useState('dashboard'); 
-            const [modal, setModal] = React.useState(null);
+            const [passInput, setPassInput] = React.useState('');
             const [scores, setScores] = React.useState([]);
             const [questions, setQuestions] = React.useState([]);
-            const [examLive, setExamLive] = React.useState(false);
-            const [newQ, setNewQ] = React.useState({ text: '', options: ['', '', '', ''], correct: 0, grade_level: 'SSS 1' });
-            const [classFilter, setClassFilter] = React.useState('ALL');
-            const [qFilter, setQFilter] = React.useState('ALL');
+            const [isLive, setIsLive] = React.useState(false);
+            const [filter, setFilter] = React.useState('ALL');
+            const [modal, setModal] = React.useState(null);
+            
+            // New Question State
+            const [qData, setQData] = React.useState({ text: '', options: ['', '', '', ''], correct: 0, class: 'SSS 1' });
 
             React.useEffect(() => {
                 if (!auth) return;
-                const unsub1 = fb.onSnapshot(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), (s) => {
-                    setScores(s.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => (b.date?.seconds || 0) - (a.date?.seconds || 0)));
-                });
-                const unsub2 = fb.onSnapshot(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), (s) => {
-                    setQuestions(s.docs.map(d => ({id: d.id, ...d.data()})));
-                });
-                const unsub3 = fb.onSnapshot(fb.doc(fb.db, "artifacts/my-project-a6208/settings/examControl"), (doc) => {
-                    if (doc.exists()) setExamLive(doc.data().isLive);
-                });
-                return () => { unsub1(); unsub2(); unsub3(); };
+                const u1 = fb.onSnapshot(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), s => setScores(s.docs.map(d => ({id:d.id, ...d.data()}))));
+                const u2 = fb.onSnapshot(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), s => setQuestions(s.docs.map(d => ({id:d.id, ...d.data()}))));
+                const u3 = fb.onSnapshot(fb.doc(fb.db, "artifacts/my-project-a6208/settings/examControl"), d => setIsLive(d.exists() ? d.data().isLive : false));
+                return () => { u1(); u2(); u3(); };
             }, [auth]);
 
-            const handleAddQuestion = async () => {
-                if(!newQ.text) return setModal({ title: "Error", message: "Enter question text!", onConfirm: () => setModal(null) });
+            const saveQuestion = async () => {
+                if(!qData.text) return;
                 await fb.addDoc(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), {
-                    questionText: newQ.text, options: newQ.options, correctOptionIndex: parseInt(newQ.correct), grade_level: newQ.grade_level
+                    questionText: qData.text, options: qData.options, correctOptionIndex: parseInt(qData.correct), grade_level: qData.class
                 });
-                setNewQ({ ...newQ, text: '', options: ['', '', '', ''], correct: 0 });
-                setModal({ title: "Success", message: "Question saved.", onConfirm: () => setModal(null) });
+                setQData({ ...qData, text: '', options: ['', '', '', ''] });
+                setModal({ title: "Success", message: "Question added to bank.", onConfirm: () => setModal(null) });
             };
 
-            const filteredScores = classFilter === 'ALL' ? scores : scores.filter(s => s.grade_level === classFilter);
-            const filteredQuestions = qFilter === 'ALL' ? questions : questions.filter(q => q.grade_level === qFilter);
-
             if (!auth) return (
-                <div className="flex items-center justify-center min-h-screen bg-gray-100 p-6">
-                    <div className="bg-white p-10 rounded-3xl shadow-2xl border w-full max-sm text-center">
-                        <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-16 mx-auto mb-6" alt="logo" />
-                        <h2 className="text-2xl font-black mb-6 uppercase">Admin Panel</h2>
-                        <input type="password" placeholder="••••••••" className="w-full p-4 border rounded-xl mb-4 text-center" onChange={e => setPass(e.target.value)} />
-                        <button onClick={() => pass === ADMIN_PASSWORD ? setAuth(true) : alert("Wrong Password")} className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold">LOGIN</button>
+                <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6">
+                    <div className="bg-white p-10 rounded-[40px] shadow-xl w-full max-w-sm text-center border">
+                        <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-16 mx-auto mb-6" />
+                        <h2 className="text-2xl font-black mb-6 uppercase tracking-tighter">Admin Access</h2>
+                        <input type="password" placeholder="Password" className="w-full p-5 border-2 rounded-2xl mb-4 text-center focus:border-blue-500 outline-none" onChange={e => setPassInput(e.target.value)} />
+                        <button onClick={() => passInput === ADMIN_PASS ? setAuth(true) : alert("Wrong!")} className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black">LOGIN</button>
                     </div>
                 </div>
             );
 
             return (
-                <div className="flex min-h-screen bg-gray-50">
-                    {modal && <CustomModal {...modal} />}
-                    <aside className="w-64 bg-slate-900 text-white flex flex-col p-6 fixed h-full">
-                        <div className="flex items-center gap-3 mb-10"><img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-8" /><h1 className="text-lg font-black text-blue-400">ADMIN</h1></div>
-                        <nav className="space-y-2 flex-1">
-                            <button onClick={()=>setActiveTab('dashboard')} className={`w-full text-left p-4 rounded-xl font-bold ${activeTab==='dashboard'?'bg-blue-600':'text-gray-400'}`}>📊 Dashboard</button>
-                            <button onClick={()=>setActiveTab('questions')} className={`w-full text-left p-4 rounded-xl font-bold ${activeTab==='questions'?'bg-blue-600':'text-gray-400'}`}>📝 Question Bank</button>
-                            <button onClick={()=>setActiveTab('results')} className={`w-full text-left p-4 rounded-xl font-bold ${activeTab==='results'?'bg-blue-600':'text-gray-400'}`}>🏆 Results</button>
+                <div className="flex min-h-screen">
+                    {modal && <Modal {...modal} />}
+                    <aside className="w-72 bg-slate-900 text-white p-8 fixed h-full flex flex-col">
+                        <div className="flex items-center gap-4 mb-12">
+                            <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-10" />
+                            <span className="font-black text-xl tracking-tighter">PORTAL</span>
+                        </div>
+                        <nav className="space-y-3 flex-1">
+                            {[['dash', '📊 Dashboard'], ['bank', '📝 Question Bank'], ['results', '🏆 Exam Results']].map(([id, label]) => (
+                                <button key={id} onClick={() => setTab(id)} className={`w-full text-left p-5 rounded-2xl font-bold transition-all ${tab === id ? 'sidebar-active' : 'text-slate-400 hover:text-white'}`}>{label}</button>
+                            ))}
                         </nav>
-                        <button onClick={()=>setPage('home')} className="mt-10 text-gray-500 text-xs font-bold">← Logout</button>
+                        <button onClick={() => setPage('home')} className="p-5 text-slate-500 font-bold hover:text-white text-sm uppercase">← Exit Portal</button>
                     </aside>
-                    <main className="flex-1 ml-64 p-12">
-                        {activeTab === 'results' && (
-                            <div className="bg-white rounded-3xl shadow-sm border overflow-hidden">
-                                <table className="w-full text-left">
-                                    <thead className="bg-slate-50 border-b"><tr><th className="p-5 text-xs font-black uppercase text-gray-400">Student</th><th className="p-5 text-xs font-black uppercase text-gray-400">Class</th><th className="p-5 text-xs font-black uppercase text-gray-400">Score</th><th className="p-5 text-right">Action</th></tr></thead>
-                                    <tbody>{filteredScores.map(s => (<tr key={s.id} className="border-b font-bold text-sm"><td className="p-5">{s.studentName}<br/><span className="text-[10px] text-gray-400 font-mono">{s.studentId}</span></td><td className="p-5">{s.grade_level}</td><td className="p-5">{s.score}%</td><td className="p-5 text-right"><button onClick={() => fb.deleteDoc(fb.doc(fb.db, "artifacts/my-project-a6208/scores", s.id))} className="text-red-400">Del</button></td></tr>))}</tbody>
-                                </table>
+
+                    <main className="flex-1 ml-72 p-16">
+                        {tab === 'dash' && (
+                            <div className="max-w-4xl">
+                                <h1 className="text-4xl font-black mb-10 tracking-tight">Overview</h1>
+                                <div className="grid grid-cols-3 gap-8 mb-12">
+                                    <div className="bg-white p-8 rounded-[32px] border shadow-sm">
+                                        <p className="text-xs font-black text-slate-400 uppercase mb-2">Exam Status</p>
+                                        <h2 className={`text-2xl font-black mb-6 ${isLive ? 'text-green-500' : 'text-red-500'}`}>{isLive ? 'LIVE' : 'OFFLINE'}</h2>
+                                        <button onClick={() => fb.setDoc(fb.doc(fb.db, "artifacts/my-project-a6208/settings/examControl"), { isLive: !isLive })} className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold text-xs">TOGGLE STATUS</button>
+                                    </div>
+                                    <div className="bg-white p-8 rounded-[32px] border shadow-sm">
+                                        <p className="text-xs font-black text-slate-400 uppercase mb-2">Total Questions</p>
+                                        <h2 className="text-4xl font-black">{questions.length}</h2>
+                                    </div>
+                                    <div className="bg-white p-8 rounded-[32px] border shadow-sm">
+                                        <p className="text-xs font-black text-slate-400 uppercase mb-2">Submissions</p>
+                                        <h2 className="text-4xl font-black text-blue-600">{scores.length}</h2>
+                                    </div>
+                                </div>
                             </div>
                         )}
-                        {activeTab === 'questions' && (
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                                <section className="bg-white p-8 rounded-3xl border h-fit sticky top-10">
-                                    <textarea className="w-full p-4 border rounded-2xl mb-4 bg-gray-50 h-32" placeholder="Question Text..." value={newQ.text} onChange={e=>setNewQ({...newQ, text:e.target.value})} />
-                                    <div className="grid grid-cols-2 gap-3 mb-6">{newQ.options.map((o,i)=>(<input key={i} className="p-3 border rounded-xl" placeholder={`Option ${optionLetters[i]}`} value={o} onChange={e=>{let c=[...newQ.options];c[i]=e.target.value;setNewQ({...newQ,options:c})}} />))}</div>
-                                    <div className="grid grid-cols-2 gap-3 mb-6">
-                                        <select className="p-3 border rounded-xl font-bold" value={newQ.correct} onChange={e=>setNewQ({...newQ,correct:e.target.value})}>{optionLetters.map((l,i)=><option key={i} value={i}>Correct: {l}</option>)}</select>
-                                        <select className="p-3 border rounded-xl font-bold" value={newQ.grade_level} onChange={e=>setNewQ({...newQ, grade_level: e.target.value})}>{GRADE_LEVELS.map(g => <option key={g} value={g}>{g}</option>)}</select>
+
+                        {tab === 'bank' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                                <div className="bg-white p-8 rounded-[32px] border shadow-sm h-fit sticky top-8">
+                                    <h2 className="text-xl font-black mb-6">Create Question</h2>
+                                    <textarea className="w-full p-5 border-2 rounded-2xl mb-4 h-32 outline-none focus:border-blue-500" placeholder="Question Text..." value={qData.text} onChange={e => setQData({...qData, text: e.target.value})} />
+                                    <div className="grid grid-cols-2 gap-4 mb-6">
+                                        {qData.options.map((o, i) => (
+                                            <input key={i} className="p-4 border-2 rounded-xl" placeholder={`Option ${LETTERS[i]}`} value={o} onChange={e => { let n = [...qData.options]; n[i] = e.target.value; setQData({...qData, options: n}) }} />
+                                        ))}
                                     </div>
-                                    <button onClick={handleAddQuestion} className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black">SAVE QUESTION</button>
-                                </section>
-                                <section className="space-y-4">
-                                    {filteredQuestions.map((q)=>(<div key={q.id} className="bg-white p-5 rounded-2xl border flex justify-between shadow-sm"><div className="text-sm font-bold"><span className="bg-blue-100 text-blue-600 px-2 py-0.5 rounded text-[10px] mr-3">{q.grade_level}</span>{q.questionText}</div><button onClick={() => fb.deleteDoc(fb.doc(fb.db,"artifacts/my-project-a6208/public/data/questions",q.id))} className="text-red-400">Del</button></div>))}
-                                </section>
+                                    <div className="grid grid-cols-2 gap-4 mb-8">
+                                        <select className="p-4 border-2 rounded-xl font-bold" value={qData.correct} onChange={e => setQData({...qData, correct: e.target.value})}>
+                                            {LETTERS.map((l, i) => <option key={i} value={i}>Correct: {l}</option>)}
+                                        </select>
+                                        <select className="p-4 border-2 rounded-xl font-bold text-blue-600" value={qData.class} onChange={e => setQData({...qData, class: e.target.value})}>
+                                            {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                    </div>
+                                    <button onClick={saveQuestion} className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black shadow-lg shadow-blue-100">SAVE TO BANK</button>
+                                </div>
+                                <div className="space-y-4">
+                                    <h2 className="text-xl font-black mb-6 flex justify-between items-center">Question Bank <span className="text-xs bg-slate-100 px-3 py-1 rounded-full">{questions.length} total</span></h2>
+                                    {questions.map(q => (
+                                        <div key={q.id} className="bg-white p-6 rounded-2xl border flex justify-between items-center group">
+                                            <div className="text-sm font-bold">
+                                                <span className="bg-blue-50 text-blue-600 text-[10px] px-2 py-1 rounded-md mr-3 uppercase">{q.grade_level}</span>
+                                                {q.questionText}
+                                            </div>
+                                            <button onClick={() => fb.deleteDoc(fb.doc(fb.db, "artifacts/my-project-a6208/public/data/questions", q.id))} className="text-red-400 opacity-0 group-hover:opacity-100 transition font-bold text-xs">Delete</button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {tab === 'results' && (
+                            <div className="bg-white rounded-[32px] border shadow-sm overflow-hidden">
+                                <div className="p-8 border-b flex justify-between items-center bg-slate-50">
+                                    <h2 className="text-xl font-black uppercase tracking-tight">Recent Submissions</h2>
+                                    <select className="p-3 border rounded-xl font-bold text-xs" onChange={e => setFilter(e.target.value)}>
+                                        <option value="ALL">ALL CLASSES</option>
+                                        {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                </div>
+                                <table className="w-full text-left">
+                                    <thead className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-white border-b">
+                                        <tr><th className="p-6">Student</th><th className="p-6">Class</th><th className="p-6">Result</th><th className="p-6 text-right">Time</th></tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {scores.filter(s => filter === 'ALL' || s.grade_level === filter).map(s => (
+                                            <tr key={s.id} className="font-bold text-sm hover:bg-slate-50 transition">
+                                                <td className="p-6">{s.studentName}<br/><span className="text-[10px] text-slate-400 font-mono">{s.studentId}</span></td>
+                                                <td className="p-6 text-xs uppercase">{s.grade_level}</td>
+                                                <td className="p-6"><span className={`px-3 py-1 rounded-full text-[10px] ${s.score >= 50 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{s.score}%</span></td>
+                                                <td className="p-6 text-right text-xs text-slate-400">{s.date?.toDate ? s.date.toDate().toLocaleTimeString() : '---'}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         )}
                     </main>
@@ -156,114 +210,123 @@
             );
         };
 
-        // --- STUDENT PAGE (The Fix is here!) ---
-        const StudentExamPage = () => {
+        const StudentExam = () => {
             const { setPage } = React.useContext(AppContext);
             const [isLive, setIsLive] = React.useState(null);
-            const [msId, setMsId] = React.useState('');
+            const [inputId, setInputId] = React.useState('');
             const [student, setStudent] = React.useState(null);
             const [questions, setQuestions] = React.useState([]);
             const [index, setIndex] = React.useState(0);
             const [answers, setAnswers] = React.useState({});
             const [loading, setLoading] = React.useState(false);
-            const [finished, setFinished] = React.useState(false);
-            const [finalScore, setFinalScore] = React.useState(0);
+            const [done, setDone] = React.useState(false);
+            const [score, setScore] = React.useState(0);
             const [modal, setModal] = React.useState(null);
 
             React.useEffect(() => {
-                return fb.onSnapshot(fb.doc(fb.db, "artifacts/my-project-a6208/settings/examControl"), (doc) => setIsLive(doc.exists() ? doc.data().isLive : false));
+                return fb.onSnapshot(fb.doc(fb.db, "artifacts/my-project-a6208/settings/examControl"), d => setIsLive(d.exists() ? d.data().isLive : false));
             }, []);
 
-            const verifyId = async () => {
+            const login = async () => {
                 setLoading(true);
-                const inputId = msId.toUpperCase().trim();
+                const cleanId = inputId.toUpperCase().trim();
                 try {
-                    // 1. Find the student in Supabase
+                    // Logic from working version: Compare input with MS- + first 5 chars of Supabase ID
                     const { data } = await _supabase.from('students').select('*').eq('status', 'Enrolled');
-                    const found = data?.find(s => ("MS-" + s.id.substring(0, 5).toUpperCase()) === inputId);
-                    
+                    const found = data?.find(s => ("MS-" + s.id.substring(0, 5).toUpperCase()) === cleanId);
+
                     if (found) {
-                        // 2. Check if already submitted in Firebase
-                        const scoreSnap = await fb.getDocs(fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), fb.where("studentId", "==", inputId)));
-                        if (!scoreSnap.empty) { 
-                            setModal({title: "Already Taken", message: "You have already submitted this exam.", onConfirm: () => setModal(null)}); 
-                            setLoading(false); return; 
+                        const sSnap = await fb.getDocs(fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), fb.where("studentId", "==", cleanId)));
+                        if (!sSnap.empty) { 
+                            setModal({ title: "Already Taken", message: "Your submission for this exam was already recorded.", onConfirm: () => setModal(null) });
+                            setLoading(false); return;
                         }
-                        
-                        setStudent({ name: found.full_name, id: inputId, grade_level: found.grade_level });
-                        
-                        // 3. HYBRID QUESTION FETCHING (Fixed)
+
+                        // Set Student with their EXACT grade_level from Supabase
+                        setStudent({ name: found.full_name, id: cleanId, grade_level: found.grade_level });
+
+                        // Fetch Questions filtered by that specific grade_level
                         const qSnap = await fb.getDocs(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"));
-                        const allQuestions = qSnap.docs.map(d => ({id: d.id, ...d.data()}));
-                        
-                        // Filter questions for this student's class, or show all if no class is set
-                        const classQuestions = allQuestions.filter(q => !q.grade_level || q.grade_level === found.grade_level);
-                        
-                        if(classQuestions.length === 0) {
-                            setModal({title: "No Exam", message: "No questions available for " + found.grade_level + ".", onConfirm: () => setModal(null)});
+                        const filtered = qSnap.docs
+                            .map(d => ({id: d.id, ...d.data()}))
+                            .filter(q => q.grade_level === found.grade_level);
+
+                        if(filtered.length === 0) {
+                            setModal({ title: "No Questions", message: `The exam for ${found.grade_level} has not been set up yet.`, onConfirm: () => setModal(null) });
                         } else {
-                            setQuestions(classQuestions);
+                            setQuestions(filtered.sort(() => Math.random() - 0.5));
                         }
                     } else {
-                        setModal({title: "Invalid ID", message: "Student ID not found.", onConfirm: () => setModal(null)});
+                        setModal({ title: "Invalid ID", message: "Check your Student ID and try again.", onConfirm: () => setModal(null) });
                     }
                 } catch (e) { alert(e.message); }
                 setLoading(false);
             };
 
-            const handleSubmit = async () => {
-                let correctCount = 0;
-                questions.forEach((q, i) => { if (answers[i] === q.correctOptionIndex) correctCount++; });
-                const pct = Math.round((correctCount / questions.length) * 100);
-                setFinalScore(pct);
+            const finish = async () => {
+                let corrects = 0;
+                questions.forEach((q, i) => { if(answers[i] === q.correctOptionIndex) corrects++; });
+                const pct = Math.round((corrects / questions.length) * 100);
+                setScore(pct);
                 await fb.addDoc(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), {
                     studentName: student.name, studentId: student.id, grade_level: student.grade_level,
-                    score: pct, correctAnswers: correctCount, totalQuestions: questions.length, date: new Date()
+                    score: pct, correctAnswers: corrects, totalQuestions: questions.length, date: new Date()
                 });
-                setFinished(true);
+                setDone(true);
+                setModal(null);
             };
 
-            if (finished) return (
-                <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-slate-50">
-                    <div className="bg-white p-12 rounded-3xl shadow-2xl border w-full max-w-sm text-center">
-                        <h2 className="text-3xl font-black mb-8">SCORE: {finalScore}%</h2>
-                        <button onClick={() => setPage('home')} className="w-full py-4 bg-black text-white rounded-xl font-bold">LOGOUT</button>
+            if (done) return (
+                <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
+                    <div className="bg-white p-12 rounded-[48px] shadow-2xl text-center border w-full max-w-sm">
+                        <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-20 mx-auto mb-10" />
+                        <h2 className="text-4xl font-black mb-4 tracking-tighter uppercase">COMPLETED!</h2>
+                        <div className="bg-blue-600 text-white p-10 rounded-3xl mb-10 shadow-xl shadow-blue-100">
+                            <p className="text-xs font-bold uppercase tracking-widest opacity-70 mb-2">Final Score</p>
+                            <h3 className="text-6xl font-black">{score}%</h3>
+                        </div>
+                        <button onClick={() => setPage('home')} className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black uppercase">LOGOUT</button>
                     </div>
                 </div>
             );
 
             if (!student) return (
-                <div className="flex flex-col items-center justify-center min-h-screen bg-white">
-                    {modal && <CustomModal {...modal} />}
-                    <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-20 mb-10" />
-                    <div className="bg-gray-50 p-10 rounded-3xl w-full max-w-sm border text-center">
-                        <h2 className="text-2xl font-black mb-6 uppercase">Student Login</h2>
-                        <input className="w-full p-5 border-2 rounded-2xl mb-5 text-center font-bold uppercase text-lg" placeholder="MS-XXXXX" onChange={e => setMsId(e.target.value)} />
-                        <button onClick={verifyId} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase">{loading ? "Wait..." : "Login"}</button>
+                <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-white">
+                    {modal && <Modal {...modal} />}
+                    <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-24 mb-12 animate-bounce" />
+                    <div className="bg-slate-50 p-10 rounded-[40px] w-full max-w-sm border-2 text-center">
+                        <h2 className="text-3xl font-black mb-8 tracking-tighter uppercase">EXAM LOGIN</h2>
+                        <input className="w-full p-6 border-4 border-white rounded-3xl mb-6 text-center font-black uppercase text-2xl shadow-inner focus:border-blue-500 outline-none transition-all" placeholder="MS-XXXXX" onChange={e => setInputId(e.target.value)} />
+                        <button onClick={login} className="w-full py-6 bg-blue-600 text-white rounded-3xl font-black text-xl shadow-xl shadow-blue-200 hover:scale-[1.02] active:scale-95 transition-all">{loading ? '...' : 'START EXAM'}</button>
                     </div>
                 </div>
             );
 
             return (
-                <div className="max-w-3xl mx-auto p-6 pt-12">
-                    <div className="flex justify-between items-center mb-10">
-                        <div><p className="text-xs font-black text-blue-600 uppercase">{student.grade_level}</p><h2 className="text-xl font-black uppercase">{student.name}</h2></div>
-                        <div className="bg-slate-900 text-white px-6 py-2 rounded-full font-black">Q {index + 1} / {questions.length}</div>
+                <div className="max-w-4xl mx-auto p-8 pt-16">
+                    {modal && <Modal {...modal} />}
+                    <div className="flex justify-between items-end mb-12">
+                        <div>
+                            <p className="text-xs font-black text-blue-600 uppercase tracking-widest mb-1">{student.grade_level}</p>
+                            <h1 className="text-3xl font-black uppercase tracking-tight">{student.name}</h1>
+                        </div>
+                        <div className="bg-slate-900 text-white px-8 py-3 rounded-2xl font-black text-sm uppercase">Quest {index + 1} of {questions.length}</div>
                     </div>
-                    <div className="bg-white p-10 rounded-[40px] shadow-sm border">
-                        <p className="text-2xl font-bold mb-10 leading-tight">{questions[index].questionText}</p>
-                        <div className="space-y-4">
+                    <div className="bg-white p-12 rounded-[48px] shadow-sm border-2">
+                        <p className="text-3xl font-bold mb-12 leading-[1.3] text-slate-800">{questions[index].questionText}</p>
+                        <div className="grid grid-cols-1 gap-5">
                             {questions[index].options.map((opt, i) => (
-                                <button key={i} onClick={() => setAnswers({...answers, [index]: i})} className={`w-full p-6 text-left rounded-2xl border-2 font-bold ${answers[index] === i ? 'bg-blue-600 text-white' : 'bg-gray-50 hover:bg-gray-100'}`}>
-                                    {optionLetters[i]}. {opt}
+                                <button key={i} onClick={() => setAnswers({...answers, [index]: i})} className={`w-full p-8 text-left rounded-[24px] border-4 transition-all font-bold text-lg ${answers[index] === i ? 'bg-blue-600 text-white border-blue-600 shadow-xl' : 'bg-slate-50 border-transparent hover:border-slate-100'}`}>
+                                    <span className="opacity-30 mr-4">{LETTERS[i]}</span> {opt}
                                 </button>
                             ))}
                         </div>
-                        <div className="mt-12 flex justify-between">
-                            <button onClick={() => setIndex(i => i - 1)} disabled={index === 0} className="px-8 font-black text-gray-300 disabled:opacity-0">BACK</button>
+                        <div className="mt-16 flex justify-between gap-6">
+                            <button onClick={() => setIndex(i => i - 1)} disabled={index === 0} className="px-10 py-4 font-black text-slate-300 disabled:opacity-0 uppercase text-xs">Previous</button>
                             {index === questions.length - 1 
-                                ? <button onClick={handleSubmit} className="bg-green-600 text-white px-12 py-4 rounded-2xl font-black">SUBMIT</button> 
-                                : <button onClick={() => setIndex(i => i + 1)} className="bg-blue-600 text-white px-12 py-4 rounded-2xl font-black">NEXT</button>}
+                                ? <button onClick={() => setModal({title: "Finish Exam", message: "Are you sure you want to submit your answers?", confirmText: "Submit", onCancel: () => setModal(null), onConfirm: finish})} className="bg-green-500 text-white px-16 py-5 rounded-3xl font-black text-lg shadow-xl shadow-green-100 uppercase">SUBMIT EXAM</button>
+                                : <button onClick={() => setIndex(i => i + 1)} className="bg-blue-600 text-white px-16 py-5 rounded-3xl font-black text-lg shadow-xl shadow-blue-100 uppercase">NEXT QUESTION</button>
+                            }
                         </div>
                     </div>
                 </div>
@@ -273,25 +336,32 @@
         const App = () => {
             const [page, setPage] = React.useState('home');
             const [ready, setReady] = React.useState(false);
-            React.useEffect(() => { const i = setInterval(() => { if(window.fb) { setReady(true); clearInterval(i); }}, 100); }, []);
-            if (!ready) return <div className="flex items-center justify-center min-h-screen font-black text-gray-400">CONNECTING...</div>;
+            
+            React.useEffect(() => {
+                const i = setInterval(() => { if(window.fb) { setReady(true); clearInterval(i); }}, 100);
+            }, []);
+
+            if (!ready) return <div className="h-screen flex items-center justify-center font-black text-slate-300 text-xs tracking-widest animate-pulse">SYNCHRONIZING SYSTEM...</div>;
+
             return (
                 <AppContext.Provider value={{ setPage }}>
                     {page === 'home' && (
-                        <div className="flex flex-col items-center justify-center min-h-screen text-center">
-                            <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-24 mb-10" />
-                            <h1 className="text-5xl font-black mb-10">MUSTARD SEED CBT</h1>
-                            <div className="flex gap-4 w-full max-w-sm">
-                                <button onClick={() => setPage('exam')} className="flex-1 bg-blue-600 text-white py-5 rounded-3xl font-black shadow-2xl">TAKE EXAM</button>
-                                <button onClick={() => setPage('admin')} className="flex-1 bg-white text-gray-400 border py-5 rounded-3xl font-black">ADMIN</button>
+                        <div className="min-h-screen flex flex-col items-center justify-center text-center p-8">
+                            <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-24 mb-12" />
+                            <h1 className="text-7xl font-black mb-12 tracking-tighter leading-none">MUSTARD SEED<br/><span className="text-blue-600 italic uppercase">CBT System</span></h1>
+                            <div className="flex flex-col sm:flex-row gap-5 w-full max-w-md">
+                                <button onClick={() => setPage('exam')} className="flex-1 bg-blue-600 text-white py-6 rounded-[32px] font-black shadow-2xl hover:scale-105 transition-all uppercase tracking-tight">TAKE EXAM</button>
+                                <button onClick={() => setPage('admin')} className="flex-1 bg-white text-slate-400 border-2 py-6 rounded-[32px] font-black hover:bg-slate-50 transition-all uppercase tracking-tight">ADMIN PORTAL</button>
                             </div>
+                            <p className="mt-16 text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] italic">Built for Excellence by Sunnykeyz</p>
                         </div>
                     )}
-                    {page === 'exam' && <StudentExamPage />}
-                    {page === 'admin' && <AdminPage />}
+                    {page === 'exam' && <StudentExam />}
+                    {page === 'admin' && <AdminPanel />}
                 </AppContext.Provider>
             );
         };
+
         ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     </script>
 </body>

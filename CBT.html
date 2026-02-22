@@ -47,21 +47,16 @@
         const optionLetters = ['A', 'B', 'C', 'D'];
         const GRADE_LEVELS = ['JSS 1', 'JSS 2', 'JSS 3', 'SSS 1', 'SSS 2', 'SSS 3'];
 
-        // --- ADMIN PAGE COMPONENT ---
+        // --- ADMIN PAGE ---
         const AdminPage = () => {
             const { setPage } = React.useContext(AppContext);
             const [auth, setAuth] = React.useState(false);
             const [pass, setPass] = React.useState('');
             const [activeTab, setActiveTab] = React.useState('dashboard'); 
-            
             const [scores, setScores] = React.useState([]);
             const [questions, setQuestions] = React.useState([]);
             const [examLive, setExamLive] = React.useState(false);
             const [newQ, setNewQ] = React.useState({ text: '', options: ['', '', '', ''], correct: 0, gradeLevel: 'SSS 1' });
-            
-            // Filters
-            const [classFilter, setClassFilter] = React.useState('ALL');
-            const [qClassFilter, setQClassFilter] = React.useState('ALL');
 
             React.useEffect(() => {
                 if (!auth) return;
@@ -77,75 +72,72 @@
                 return () => { unsub1(); unsub2(); unsub3(); };
             }, [auth]);
 
+            const toggleExam = async () => await fb.setDoc(fb.doc(fb.db, "artifacts/my-project-a6208/settings/examControl"), { isLive: !examLive });
+
             const addQuestion = async () => {
                 if(!newQ.text) return alert("Enter Question!");
                 await fb.addDoc(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), {
                     questionText: newQ.text, options: newQ.options, correctOptionIndex: parseInt(newQ.correct), gradeLevel: newQ.gradeLevel
                 });
                 setNewQ({ ...newQ, text: '', options: ['', '', '', ''] });
-                alert("Saved!");
+                alert("Question Saved!");
             };
 
-            const filteredScores = classFilter === 'ALL' ? scores : scores.filter(s => s.gradeLevel === classFilter);
-            const filteredQuestions = qClassFilter === 'ALL' ? questions : questions.filter(q => q.gradeLevel === qClassFilter);
+            const deleteAllResults = async () => {
+                if(!confirm("WIPE ALL RESULTS?")) return;
+                const batch = fb.writeBatch(fb.db);
+                scores.forEach(s => batch.delete(fb.doc(fb.db, "artifacts/my-project-a6208/scores", s.id)));
+                await batch.commit();
+            };
 
             if (!auth) return (
                 <div className="flex items-center justify-center min-h-screen bg-gray-100">
                     <div className="bg-white p-8 rounded-2xl shadow-xl border w-80">
-                        <h2 className="text-xl font-black mb-4 tracking-tighter uppercase">Admin</h2>
+                        <h2 className="text-xl font-black mb-4">ADMIN LOGIN</h2>
                         <input type="password" border rounded-lg mb-4 p-3 w-full outline-none focus:border-blue-500" onChange={e => setPass(e.target.value)} />
-                        <button onClick={() => pass === ADMIN_PASSWORD ? setAuth(true) : alert("Denied")} className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold">Login</button>
+                        <button onClick={() => pass === ADMIN_PASSWORD ? setAuth(true) : alert("Denied")} className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold">Access Panel</button>
                     </div>
                 </div>
             );
 
             return (
                 <div className="flex min-h-screen bg-gray-50">
-                    <aside className="w-64 bg-slate-900 text-white p-6 fixed h-full">
+                    <aside className="w-64 bg-slate-900 text-white flex flex-col p-6 fixed h-full">
                         <h1 className="text-xl font-black mb-10 text-blue-400">MUSTARD ADMIN</h1>
-                        <nav className="space-y-2">
-                            <button onClick={()=>setActiveTab('dashboard')} className={`w-full text-left p-3 rounded-lg font-bold ${activeTab==='dashboard'?'bg-blue-600':'text-gray-400'}`}>📊 Dashboard</button>
-                            <button onClick={()=>setActiveTab('questions')} className={`w-full text-left p-3 rounded-lg font-bold ${activeTab==='questions'?'bg-blue-600':'text-gray-400'}`}>📝 Questions</button>
-                            <button onClick={()=>setActiveTab('results')} className={`w-full text-left p-3 rounded-lg font-bold ${activeTab==='results'?'bg-blue-600':'text-gray-400'}`}>🏆 Results</button>
+                        <nav className="space-y-2 flex-1">
+                            <button onClick={()=>setActiveTab('dashboard')} className={`w-full text-left p-3 rounded-lg font-bold transition ${activeTab==='dashboard'?'bg-blue-600':'hover:bg-slate-800 text-gray-400'}`}>📊 Dashboard</button>
+                            <button onClick={()=>setActiveTab('questions')} className={`w-full text-left p-3 rounded-lg font-bold transition ${activeTab==='questions'?'bg-blue-600':'hover:bg-slate-800 text-gray-400'}`}>📝 Question Bank</button>
+                            <button onClick={()=>setActiveTab('results')} className={`w-full text-left p-3 rounded-lg font-bold transition ${activeTab==='results'?'bg-blue-600':'hover:bg-slate-800 text-gray-400'}`}>🏆 Exam Results</button>
                         </nav>
                         <button onClick={()=>setPage('home')} className="mt-10 text-gray-400 text-sm">← Logout</button>
                     </aside>
 
                     <main className="flex-1 ml-64 p-10">
-                        {activeTab === 'results' && (
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center">
-                                    <h2 className="text-2xl font-black">Exam Results</h2>
-                                    <select className="p-2 border rounded-lg font-bold text-xs" value={classFilter} onChange={e => setClassFilter(e.target.value)}>
-                                        <option value="ALL">ALL CLASSES</option>
-                                        {GRADE_LEVELS.map(g => <option key={g} value={g}>{g}</option>)}
-                                    </select>
-                                </div>
-                                <div className="bg-white rounded-2xl shadow border overflow-hidden">
-                                    <table className="w-full text-left">
-                                        <thead className="bg-slate-50 border-b font-black text-[10px] uppercase text-gray-400">
-                                            <tr><th className="p-4">Student</th><th>Class</th><th>Raw Score</th><th>Grade</th><th>Action</th></tr>
-                                        </thead>
-                                        <tbody>
-                                            {filteredScores.map(s => (
-                                                <tr key={s.id} className="border-b font-bold text-sm">
-                                                    <td className="p-4">{s.studentName}<br/><span className="text-[10px] text-gray-400">{s.studentId}</span></td>
-                                                    <td>{s.gradeLevel}</td>
-                                                    <td>{s.correctAnswers} / {s.totalQuestions}</td>
-                                                    <td><span className={`px-2 py-1 rounded text-xs ${s.score >= 50 ? 'bg-green-100 text-green-700':'bg-red-100 text-red-700'}`}>{s.score}%</span></td>
-                                                    <td><button onClick={async()=>await fb.deleteDoc(fb.doc(fb.db,"artifacts/my-project-a6208/scores",s.id))} className="text-red-500">Delete</button></td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                        {activeTab === 'dashboard' && (
+                            <div className="space-y-6">
+                                <h2 className="text-3xl font-black">System Overview</h2>
+                                <div className="grid grid-cols-3 gap-6">
+                                    <div className="bg-white p-6 rounded-2xl shadow border">
+                                        <p className="text-gray-400 font-bold text-xs uppercase">Exam Status</p>
+                                        <h3 className={`text-2xl font-black ${examLive?'text-green-500':'text-red-500'}`}>{examLive?'LIVE':'OFFLINE'}</h3>
+                                        <button onClick={toggleExam} className="mt-4 w-full py-2 bg-slate-900 text-white rounded-lg font-bold">{examLive?'Stop Exam':'Start Exam'}</button>
+                                    </div>
+                                    <div className="bg-white p-6 rounded-2xl shadow border text-center">
+                                        <p className="text-gray-400 font-bold text-xs uppercase">Questions</p>
+                                        <h3 className="text-4xl font-black">{questions.length}</h3>
+                                    </div>
+                                    <div className="bg-white p-6 rounded-2xl shadow border text-center">
+                                        <p className="text-gray-400 font-bold text-xs uppercase">Submissions</p>
+                                        <h3 className="text-4xl font-black text-blue-600">{scores.length}</h3>
+                                    </div>
                                 </div>
                             </div>
                         )}
 
                         {activeTab === 'questions' && (
-                            <div className="grid grid-cols-2 gap-10">
-                                <section className="bg-white p-6 rounded-2xl shadow border h-fit">
-                                    <h2 className="text-xl font-black mb-4 text-blue-600">Add Question</h2>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                                <section className="bg-white p-6 rounded-2xl shadow border h-fit sticky top-10">
+                                    <h2 className="text-xl font-black mb-4">Add New Question</h2>
                                     <textarea className="w-full p-4 border rounded-xl mb-4 bg-gray-50" value={newQ.text} onChange={e=>setNewQ({...newQ, text:e.target.value})} />
                                     <div className="grid grid-cols-2 gap-2 mb-4">
                                         {newQ.options.map((o,i)=>(<input key={i} className="p-2 border rounded" placeholder={`Option ${optionLetters[i]}`} value={o} onChange={e=>{let c=[...newQ.options];c[i]=e.target.value;setNewQ({...newQ,options:c})}} />))}
@@ -154,45 +146,48 @@
                                         <select className="flex-1 p-2 border rounded font-bold" value={newQ.correct} onChange={e=>setNewQ({...newQ,correct:e.target.value})}>{optionLetters.map((l,i)=><option key={i} value={i}>Ans: {l}</option>)}</select>
                                         <select className="flex-1 p-2 border rounded font-bold bg-blue-50" value={newQ.gradeLevel} onChange={e=>setNewQ({...newQ, gradeLevel: e.target.value})}>{GRADE_LEVELS.map(g => <option key={g} value={g}>{g}</option>)}</select>
                                     </div>
-                                    <button onClick={addQuestion} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold">Save Question</button>
+                                    <button onClick={addQuestion} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold">Add to Bank</button>
                                 </section>
 
                                 <section className="space-y-3">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <h2 className="text-xl font-black">Bank</h2>
-                                        <select className="p-1 border rounded text-[10px] font-black uppercase" value={qClassFilter} onChange={e=>setQClassFilter(e.target.value)}>
-                                            <option value="ALL">ALL</option>
-                                            {GRADE_LEVELS.map(g => <option key={g} value={g}>{g}</option>)}
-                                        </select>
-                                    </div>
-                                    {filteredQuestions.map((q,i)=>(
-                                        <div key={q.id} className="bg-white p-4 rounded-xl border flex justify-between items-center text-xs font-bold shadow-sm">
-                                            <div><span className="text-blue-600 mr-2">[{q.gradeLevel}]</span> {q.questionText}</div>
-                                            <button onClick={async()=>await fb.deleteDoc(fb.doc(fb.db,"artifacts/my-project-a6208/public/data/questions",q.id))} className="text-red-400">Del</button>
+                                    <h2 className="text-xl font-black">Bank ({questions.length})</h2>
+                                    {questions.map((q,i)=>(
+                                        <div key={q.id} className="bg-white p-4 rounded-xl border flex justify-between items-center shadow-sm">
+                                            <div className="text-xs">
+                                                <span className="bg-blue-100 text-blue-600 px-2 rounded mr-2 font-black">{q.gradeLevel}</span>
+                                                <span className="font-bold">{q.questionText}</span>
+                                            </div>
+                                            <button onClick={async()=>await fb.deleteDoc(fb.doc(fb.db,"artifacts/my-project-a6208/public/data/questions",q.id))} className="text-red-400 font-bold">Del</button>
                                         </div>
                                     ))}
                                 </section>
                             </div>
                         )}
-                        
-                        {/* Dashboard code remains the same as CBT (Confirm Work).html */}
-                        {activeTab === 'dashboard' && (
-                             <div className="space-y-6">
-                                <h2 className="text-3xl font-black tracking-tighter">System Overview</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <div className="bg-white p-6 rounded-2xl shadow-sm border">
-                                        <p className="text-gray-400 font-bold text-xs uppercase">Exam Status</p>
-                                        <h3 className={`text-2xl font-black ${examLive?'text-green-500':'text-red-500'}`}>{examLive?'LIVE':'OFFLINE'}</h3>
-                                        <button onClick={async () => await fb.setDoc(fb.doc(fb.db, "artifacts/my-project-a6208/settings/examControl"), { isLive: !examLive })} className="mt-4 w-full py-2 bg-slate-900 text-white rounded-lg text-sm font-bold">{examLive?'Stop Exam':'Start Exam'}</button>
-                                    </div>
-                                    <div className="bg-white p-6 rounded-2xl shadow-sm border">
-                                        <p className="text-gray-400 font-bold text-xs uppercase">Total Questions</p>
-                                        <h3 className="text-2xl font-black">{questions.length}</h3>
-                                    </div>
-                                    <div className="bg-white p-6 rounded-2xl shadow-sm border">
-                                        <p className="text-gray-400 font-bold text-xs uppercase">Student Submissions</p>
-                                        <h3 className="text-2xl font-black text-blue-600">{scores.length}</h3>
-                                    </div>
+
+                        {activeTab === 'results' && (
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <h2 className="text-2xl font-black">Student Results</h2>
+                                    <button onClick={deleteAllResults} className="bg-red-500 text-white px-4 py-2 rounded-lg text-xs font-bold">WIPE ALL</button>
+                                </div>
+                                <div className="bg-white rounded-2xl shadow border overflow-hidden">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-slate-50 border-b font-black text-[10px] uppercase text-gray-400">
+                                            <tr><th className="p-4">Student</th><th>Class</th><th>Raw Score</th><th>Grade</th><th>Time</th><th>Action</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            {scores.map(s => (
+                                                <tr key={s.id} className="border-b text-sm font-bold">
+                                                    <td className="p-4">{s.studentName}<br/><span className="text-[10px] text-gray-400">{s.studentId}</span></td>
+                                                    <td>{s.gradeLevel}</td>
+                                                    <td>{s.correctAnswers} / {s.totalQuestions}</td>
+                                                    <td><span className={`px-2 py-1 rounded text-xs ${s.score >= 50 ? 'bg-green-100 text-green-700':'bg-red-100 text-red-700'}`}>{s.score}%</span></td>
+                                                    <td className="text-[10px] text-gray-400">{s.date?.toDate ? s.date.toDate().toLocaleString() : 'N/A'}</td>
+                                                    <td><button onClick={async()=>await fb.deleteDoc(fb.doc(fb.db,"artifacts/my-project-a6208/scores",s.id))} className="text-red-500">Delete</button></td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         )}
@@ -201,8 +196,7 @@
             );
         };
 
-        // --- STUDENT PAGE COMPONENT ---
-        // (Includes the MS- ID validation and gradeLevel auto-filtering logic from the last fix)
+        // --- STUDENT PAGE ---
         const StudentExamPage = () => {
             const { setPage } = React.useContext(AppContext);
             const [isLive, setIsLive] = React.useState(null);
@@ -218,6 +212,28 @@
             React.useEffect(() => {
                 return fb.onSnapshot(fb.doc(fb.db, "artifacts/my-project-a6208/settings/examControl"), (doc) => setIsLive(doc.exists() ? doc.data().isLive : false));
             }, []);
+
+            async function finishExam(isAuto = false) {
+                if (!isAuto && !confirm("Submit answers?")) return;
+                let correctCount = 0;
+                questions.forEach((q, i) => { if (answers[i] === q.correctOptionIndex) correctCount++; });
+                const pct = Math.round((correctCount / questions.length) * 100);
+                setFinalScore(pct);
+                try {
+                    await fb.addDoc(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), {
+                        studentName: student.name, studentId: student.id, gradeLevel: student.gradeLevel,
+                        score: pct, correctAnswers: correctCount, totalQuestions: questions.length, date: new Date()
+                    });
+                    setFinished(true);
+                } catch (e) { alert(e.message); }
+            }
+
+            // Security: Auto-submit on tab switch
+            React.useEffect(() => {
+                const handleVisibility = () => { if (document.hidden && student && !finished) { alert("TAB SWITCH DETECTED: Auto-submitting..."); finishExam(true); }};
+                document.addEventListener("visibilitychange", handleVisibility);
+                return () => document.removeEventListener("visibilitychange", handleVisibility);
+            }, [student, finished, questions, answers]);
 
             const verifyId = async () => {
                 setLoading(true);
@@ -240,30 +256,20 @@
                 setLoading(false);
             };
 
-            async function submitExam() {
-                let correctCount = 0;
-                questions.forEach((q, i) => { if (answers[i] === q.correctOptionIndex) correctCount++; });
-                const pct = Math.round((correctCount / questions.length) * 100);
-                setFinalScore(pct);
-                await fb.addDoc(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), {
-                    studentName: student.name, studentId: student.id, gradeLevel: student.gradeLevel,
-                    score: pct, correctAnswers: correctCount, totalQuestions: questions.length, date: new Date()
-                });
-                setFinished(true);
-            }
+            if (isLive === false) return <div className="flex flex-col items-center justify-center min-h-screen bg-slate-900 text-white"><h1>EXAM CLOSED</h1><button onClick={()=>setPage('home')}>Back</button></div>;
+            if (finished) return <div className="flex flex-col items-center justify-center min-h-screen"><h1>Score: {finalScore}%</h1><button onClick={()=>setPage('home')}>Exit</button></div>;
 
-            if (finished) return <div className="p-20 text-center"><h1>Score: {finalScore}%</h1><button onClick={()=>setPage('home')}>Exit</button></div>;
             if (!student) return (
                 <div className="flex items-center justify-center min-h-screen">
-                    <div className="bg-white p-8 rounded-2xl shadow-xl w-80 text-center">
-                        <h2 className="text-xl font-black mb-6">STUDENT LOGIN</h2>
-                        <input className="w-full p-4 border rounded-xl mb-4 text-center font-bold" placeholder="MS-XXXXX" onChange={e => setMsId(e.target.value)} />
-                        <button onClick={verifyId} className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold">{loading ? "Wait..." : "Start"}</button>
+                    <div className="bg-white p-8 rounded-2xl shadow-xl w-80 border text-center">
+                        <h2 className="text-xl font-black mb-6 uppercase">Student Login</h2>
+                        <input className="w-full p-4 border rounded-xl mb-4 text-center font-bold uppercase" placeholder="MS-XXXXX" onChange={e => setMsId(e.target.value)} />
+                        <button onClick={verifyId} className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold">{loading ? "Verifying..." : "Start"}</button>
                     </div>
                 </div>
             );
 
-            if (questions.length === 0) return <div className="p-20 text-center font-black">Loading...</div>;
+            if (questions.length === 0) return <div className="p-20 text-center font-black animate-pulse">Loading Questions...</div>;
 
             return (
                 <div className="max-w-2xl mx-auto p-6 pt-12">
@@ -281,8 +287,8 @@
                             ))}
                         </div>
                         <div className="mt-10 flex justify-between">
-                            <button onClick={() => setIndex(i => i - 1)} disabled={index === 0}>Back</button>
-                            {index === questions.length - 1 ? <button onClick={submitExam} className="bg-green-600 text-white px-10 py-3 rounded-xl font-bold">Finish</button> : <button onClick={() => setIndex(i => i + 1)} className="bg-blue-600 text-white px-10 py-3 rounded-xl font-bold">Next</button>}
+                            <button onClick={() => setIndex(i => i - 1)} disabled={index === 0} className="text-gray-400 font-bold disabled:opacity-0 uppercase text-xs">Back</button>
+                            {index === questions.length - 1 ? <button onClick={() => finishExam()} className="bg-green-600 text-white px-10 py-3 rounded-xl font-bold uppercase">Finish</button> : <button onClick={() => setIndex(i => i + 1)} className="bg-blue-600 text-white px-10 py-3 rounded-xl font-bold uppercase">Next</button>}
                         </div>
                     </div>
                 </div>
@@ -294,14 +300,16 @@
             const [ready, setReady] = React.useState(false);
             React.useEffect(() => { const i = setInterval(() => { if(window.fb) { setReady(true); clearInterval(i); }}, 100); }, []);
             if (!ready) return <div className="p-20 text-center font-black">CONNECTING...</div>;
+
             return (
                 <AppContext.Provider value={{ setPage }}>
                     {page === 'home' && (
                         <div className="flex flex-col items-center justify-center min-h-screen text-center">
+                            <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-24 mb-6" />
                             <h1 className="text-5xl font-black mb-10 tracking-tighter">MUSTARD SEED CBT</h1>
                             <div className="space-x-4">
-                                <button onClick={() => setPage('exam')} className="bg-blue-600 text-white px-12 py-4 rounded-full font-bold shadow-lg hover:bg-blue-700 transition">TAKE EXAM</button>
-                                <button onClick={() => setPage('admin')} className="bg-white text-gray-500 px-12 py-4 rounded-full font-bold border hover:bg-gray-50 transition">ADMIN</button>
+                                <button onClick={() => setPage('exam')} className="bg-blue-600 text-white px-12 py-4 rounded-full font-bold shadow-lg">TAKE EXAM</button>
+                                <button onClick={() => setPage('admin')} className="bg-white text-gray-500 px-12 py-4 rounded-full font-bold border">ADMIN</button>
                             </div>
                         </div>
                     )}

@@ -48,7 +48,7 @@
         const AppContext = React.createContext(null);
         const ADMIN_PASSWORD = 'SUNNYKEYZ2025@';
         const optionLetters = ['A', 'B', 'C', 'D'];
-        const grade_level = ['JSS 1', 'JSS 2', 'JSS 3', 'SSS 1', 'SSS 2', 'SSS 3'];
+        const GRADE_LEVELS = ['JSS 1', 'JSS 2', 'JSS 3', 'SSS 1', 'SSS 2', 'SSS 3'];
 
         // --- CUSTOM MODAL HELPER ---
         const CustomModal = ({ title, message, onConfirm, onCancel, confirmText = "Confirm" }) => (
@@ -96,10 +96,11 @@
 
             const handleAddQuestion = async () => {
                 if(!newQ.text) return setModal({ title: "Error", message: "Enter question text!", onConfirm: () => setModal(null) });
+                // FIXED: Changed gradeLevel to grade_level to match student component
                 await fb.addDoc(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), {
                     questionText: newQ.text, options: newQ.options, correctOptionIndex: parseInt(newQ.correct), grade_level: newQ.grade_level
                 });
-                setNewQ({ text: '', options: ['', '', '', ''], correct: 0, grade_level: newQ.grade_level });
+                setNewQ({ ...newQ, text: '', options: ['', '', '', ''], correct: 0 });
                 setModal({ title: "Success", message: "Question saved to bank.", onConfirm: () => setModal(null) });
             };
 
@@ -260,11 +261,13 @@
                     const { data } = await _supabase.from('students').select('*').eq('status', 'Enrolled');
                     const found = data?.find(s => ("MS-" + s.id.substring(0, 5).toUpperCase()) === inputId);
                     if (found) {
-                        const scoreSnap = await fb.getDocs(fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), fb.where("studentId", "==", inputId)));
+                                                              const scoreSnap = await fb.getDocs(fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), fb.where("studentId", "==", inputId)));
                         if (!scoreSnap.empty) { setModal({title: "Already Taken", message: "You have already submitted this exam.", onConfirm: () => setModal(null)}); setLoading(false); return; }
                         
-                        setStudent({ name: found.full_name, id: inputId, gradeLevel: found.grade_level });
-                        const qSnap = await fb.getDocs(fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), fb.where("gradeLevel", "==", found.grade_level)));
+                        // FIXED: Using grade_level consistently
+                        setStudent({ name: found.full_name, id: inputId, grade_level: found.grade_level });
+                        const qSnap = await fb.getDocs(fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), fb.where("grade_level", "==", found.grade_level)));
+                        
                         if(qSnap.empty) setModal({title: "No Exam", message: "No questions available for your class yet.", onConfirm: () => setModal(null)});
                         else setQuestions(qSnap.docs.map(d => ({id: d.id, ...d.data()})));
                     } else setModal({title: "Invalid ID", message: "Student ID not found or not enrolled.", onConfirm: () => setModal(null)});
@@ -278,7 +281,7 @@
                 const pct = Math.round((correctCount / questions.length) * 100);
                 setFinalScore(pct);
                 await fb.addDoc(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), {
-                    studentName: student.name, studentId: student.id, gradeLevel: student.gradeLevel,
+                    studentName: student.name, studentId: student.id, grade_level: student.grade_level,
                     score: pct, correctAnswers: correctCount, totalQuestions: questions.length, date: new Date()
                 });
                 setFinished(true);
@@ -317,7 +320,7 @@
                     <div className="flex justify-between items-center mb-10">
                         <div className="flex items-center gap-4">
                             <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-12" alt="logo" />
-                            <div><p className="text-[10px] text-blue-600 font-black uppercase tracking-widest">{student.gradeLevel}</p><h2 className="text-xl font-black uppercase">{student.name}</h2></div>
+                            <div><p className="text-[10px] text-blue-600 font-black uppercase tracking-widest">{student.grade_level}</p><h2 className="text-xl font-black uppercase">{student.name}</h2></div>
                         </div>
                         <div className="bg-slate-900 text-white px-6 py-2 rounded-full font-black text-sm">Question {index + 1} of {questions.length}</div>
                     </div>
@@ -369,5 +372,3 @@
     </script>
 </body>
 </html>
-
-

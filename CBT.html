@@ -4,7 +4,7 @@
     <link rel="icon" type="image/x-icon" href="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mustard Seed CBT - Pro Edition</title>
+    <title>Mustard Seed CBT - Multi-Class Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -39,7 +39,7 @@
     <script type="text/babel">
         const { createClient } = window.supabase;
         const SB_URL = 'https://jqrcoqslmylmubxwfgyt.supabase.co';
-        const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxcmNvcXNsbXlsbXVieHdmZ3l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2ODc2NzgsImV4cCI6MjA4MDI2MzY3OH0.4bXOY35R3eGYZjPxtuJzvwifPEfHXr5UEdzFbB-caKU';
+        const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxcmNvcXNsbXlsmubxwfgytIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2ODc2NzgsImV4cCI6MjA4MDI2MzY3OH0.4bXOY35R3eGYZjPxtuJzvwifPEfHXr5UEdzFbB-caKU';
         const _supabase = createClient(SB_URL, SB_KEY);
 
         const AppContext = React.createContext(null);
@@ -143,7 +143,7 @@
                                         <h3 className="text-2xl font-black">{questions.length}</h3>
                                     </div>
                                     <div className="bg-white p-6 rounded-2xl shadow-sm border">
-                                        <p className="text-gray-400 font-bold text-xs uppercase">Student Submissions</p>
+                                        <p className="text-gray-400 font-bold text-xs uppercase">Total Submissions</p>
                                         <h3 className="text-2xl font-black text-blue-600">{scores.length}</h3>
                                     </div>
                                 </div>
@@ -254,7 +254,7 @@
             }, []);
 
             async function finishExam(isAuto = false) {
-                if (!isAuto && !confirm("Submit your answers?")) return;
+                if (!isAuto && !confirm("Submit Exam?")) return;
                 let correctCount = 0;
                 questions.forEach((q, i) => { if (answers[i] === q.correctOptionIndex) correctCount++; });
                 const pct = questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 0;
@@ -263,22 +263,21 @@
                     await fb.addDoc(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), {
                         studentName: student.name, 
                         studentId: student.id, 
-                        className: student.className, // Correctly saves class for Admin view
+                        className: student.className,
                         score: pct, 
                         correctAnswers: correctCount, 
                         totalQuestions: questions.length, 
                         date: new Date()
                     });
                     setFinished(true);
-                } catch (e) { alert("Error: " + e.message); }
+                } catch (e) { alert(e.message); }
             }
 
-            // Security logic from working file
             React.useEffect(() => {
                 const handleVisibilityChange = () => {
                     if (document.hidden && student && !finished) {
                         alert("SECURITY VIOLATION: Tab switching detected. Immediate submission triggered.");
-                        finishExam(true); 
+                        finishExam(true);
                     }
                 };
                 document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -296,24 +295,19 @@
                         const scoreSnap = await fb.getDocs(fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), fb.where("studentId", "==", inputId)));
                         if (!scoreSnap.empty) { alert("Already Submitted."); setLoading(false); return; }
                         
-                        const sClass = found.class || 'SS1'; // Defaults to SS1 if not specified
+                        const sClass = found.class || 'SS1';
                         setStudent({ name: found.full_name, id: inputId, className: sClass });
                         
-                        // Fix: Query questions filtered by the student's actual class
+                        // Separate questions based on the student's actual class
                         const qQuery = fb.query(
                             fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), 
                             fb.where("className", "==", sClass)
                         );
                         const snap = await fb.getDocs(qQuery);
                         
-                        if(snap.empty) {
-                            alert(`No questions found for class ${sClass}.`);
-                        } else {
-                            setQuestions(snap.docs.map(d => ({id: d.id, ...d.data()})));
-                        }
-                    } else {
-                        alert("ID Not Found. Ensure student is 'Enrolled'");
-                    }
+                        if(snap.empty) alert(`No questions found for ${sClass}`);
+                        else setQuestions(snap.docs.map(d => ({id: d.id, ...d.data()})));
+                    } else alert("ID Not Found.");
                 } catch (e) { alert(e.message); }
                 setLoading(false);
             };
@@ -332,7 +326,7 @@
                         <h1 className="text-2xl font-black mb-6">Submission Successful!</h1>
                         <div className="bg-blue-50 p-6 rounded-2xl mb-6"><h2 className="text-4xl font-black text-blue-600">{finalScore}%</h2></div>
                         <p className="font-bold uppercase text-xs text-gray-400">{student.name} ({student.className})</p>
-                        <button onClick={() => setPage('home')} className="mt-8 w-full bg-black text-white py-4 rounded-xl font-bold">Exit System</button>
+                        <button onClick={() => setPage('home')} className="mt-8 w-full bg-black text-white py-4 rounded-xl font-bold">Exit</button>
                     </div>
                 </div>
             );

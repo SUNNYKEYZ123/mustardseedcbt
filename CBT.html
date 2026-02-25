@@ -4,7 +4,7 @@
     <link rel="icon" type="image/x-icon" href="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mustard Seed CBT - Fixed Classes</title>
+    <title>Mustard Seed CBT - Complete Panel</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -45,7 +45,6 @@
         const AppContext = React.createContext(null);
         const ADMIN_PASSWORD = 'SUNNYKEYZ2025@';
         const optionLetters = ['A', 'B', 'C', 'D'];
-        // UPDATED TO MATCH YOUR DATABASE
         const CLASSES = ['SSS 1', 'SSS 2', 'SSS 3'];
 
         const AdminPage = () => {
@@ -56,8 +55,8 @@
             const [scores, setScores] = React.useState([]);
             const [questions, setQuestions] = React.useState([]);
             const [examLive, setExamLive] = React.useState(false);
-            const [newQ, setNewQ] = React.useState({ text: '', options: ['', '', '', ''], correct: 0, className: 'SSS 1' });
             const [resFilter, setResFilter] = React.useState('ALL');
+            const [newQ, setNewQ] = React.useState({ text: '', options: ['', '', '', ''], correct: 0, className: 'SSS 1' });
 
             React.useEffect(() => {
                 if (!auth) return;
@@ -92,89 +91,67 @@
                             <button onClick={()=>setActiveTab('questions')} className={`w-full text-left p-3 rounded-lg font-bold ${activeTab==='questions'?'bg-blue-600':'text-gray-400'}`}>📝 Questions</button>
                             <button onClick={()=>setActiveTab('results')} className={`w-full text-left p-3 rounded-lg font-bold ${activeTab==='results'?'bg-blue-600':'text-gray-400'}`}>🏆 Results</button>
                         </nav>
-                        <button onClick={()=>setPage('home')} className="absolute bottom-6 text-gray-400 text-sm">← Back to Home</button>
                     </aside>
 
                     <main className="flex-1 ml-64 p-10">
                         {activeTab === 'results' && (
-                            <div className="bg-white rounded-2xl shadow border overflow-hidden">
-                                <div className="p-4 border-b flex justify-between items-center bg-gray-50">
-                                    <h2 className="font-black uppercase text-sm">Exam Records</h2>
-                                    <select value={resFilter} onChange={e=>setResFilter(e.target.value)} className="p-1 border rounded text-xs font-bold">
-                                        <option value="ALL">All Classes</option>
-                                        {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
-                                    </select>
+                            <div className="space-y-6">
+                                <div className="flex justify-between items-center">
+                                    <h2 className="text-2xl font-black">Student Performance Records</h2>
+                                    <div className="flex gap-4">
+                                        <select value={resFilter} onChange={e=>setResFilter(e.target.value)} className="p-2 border rounded-lg font-bold text-sm bg-white">
+                                            <option value="ALL">All Classes</option>
+                                            {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                        <button onClick={async() => {if(confirm("Wipe all data?")) { const b = fb.writeBatch(fb.db); scores.forEach(s => b.delete(fb.doc(fb.db, "artifacts/my-project-a6208/scores", s.id))); await b.commit(); }}} className="bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase">Clear All</button>
+                                    </div>
                                 </div>
                                 
+                                <div className="bg-white rounded-2xl shadow-xl border overflow-hidden">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-gray-100 border-b text-[10px] font-black uppercase text-gray-500">
+                                            <tr>
+                                                <th className="p-4">Student ID</th>
+                                                <th className="p-4">Full Name</th>
+                                                <th className="p-4">Class</th>
+                                                <th className="p-4">Raw Score</th>
+                                                <th className="p-4">Percentage</th>
+                                                <th className="p-4">Submission Time</th>
+                                                <th className="p-4 text-center">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="text-sm">
+                                            {scores.filter(s=>resFilter==='ALL'||s.className===resFilter).map(s=>(
+                                                <tr key={s.id} className="border-b hover:bg-blue-50 transition">
+                                                    <td className="p-4 font-mono font-bold text-blue-600 text-xs">{s.studentId}</td>
+                                                    <td className="p-4 font-black uppercase text-slate-800">{s.studentName}</td>
+                                                    <td className="p-4 font-bold text-gray-500">{s.className}</td>
+                                                    <td className="p-4 font-bold">{s.correctAnswers} / {s.totalQuestions}</td>
+                                                    <td className="p-4">
+                                                        <span className={`px-3 py-1 rounded-full text-xs font-black ${s.score >= 50 ? 'bg-green-100 text-green-700':'bg-red-100 text-red-700'}`}>
+                                                            {s.score}%
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-4 text-xs text-gray-400">
+                                                        {s.date?.seconds ? new Date(s.date.seconds * 1000).toLocaleString() : 'N/A'}
+                                                    </td>
+                                                    <td className="p-4 text-center">
+                                                        <button onClick={async()=> {if(confirm("Delete this result?")) await fb.deleteDoc(fb.doc(fb.db,"artifacts/my-project-a6208/scores",s.id))}} className="text-red-500 hover:bg-red-50 p-2 rounded-lg font-black text-[10px] uppercase">Delete</button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         )}
 
                         {activeTab === 'dashboard' && (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div className="bg-white p-6 rounded-2xl shadow border">
                                     <p className="text-xs font-bold text-gray-400 uppercase">Exam Mode</p>
                                     <h3 className={`text-2xl font-black ${examLive?'text-green-500':'text-red-500'}`}>{examLive?'LIVE':'OFFLINE'}</h3>
-                                    <button onClick={async()=>await fb.setDoc(fb.doc(fb.db,"artifacts/my-proj<table className="w-full text-left">
-    <thead className="bg-gray-100 border-b text-[10px] font-black uppercase text-gray-500">
-        <tr>
-            <th className="p-4">Student ID</th>
-            <th className="p-4">Candidate & Class</th>
-            <th className="p-4">Raw Score</th>
-            <th className="p-4">Percentage</th>
-            <th className="p-4">Time</th>
-            <th className="p-4 text-center">Action</th>
-        </tr>
-    </thead>
-    <tbody className="text-sm">
-        {scores.filter(s => resFilter === 'ALL' || s.className === resFilter).map(s => (
-            <tr key={s.id} className="border-b hover:bg-gray-50 transition">
-                {/* 1. Student ID */}
-                <td className="p-4 font-mono font-bold text-gray-400 text-xs">
-                    {s.studentId}
-                </td>
-                
-                {/* 2. Name & Class (Below Name) */}
-                <td className="p-4">
-                    <p className="font-black uppercase text-slate-800 leading-none">{s.studentName}</p>
-                    <p className="text-[9px] text-blue-600 font-bold uppercase mt-1">
-                        {s.className || "ARCHIVE"}
-                    </p>
-                </td>
-                
-                {/* 3. Raw Score */}
-                <td className="p-4 font-bold text-slate-600">
-                    {s.correctAnswers} <span className="text-gray-300 mx-1">/</span> {s.totalQuestions}
-                </td>
-                
-                {/* 4. Color-Formatted Percentage */}
-                <td className="p-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-black shadow-sm border ${
-                        s.score >= 70 ? 'bg-green-100 text-green-700 border-green-200' : 
-                        s.score >= 50 ? 'bg-blue-100 text-blue-700 border-blue-200' : 
-                        'bg-red-100 text-red-700 border-red-200'
-                    }`}>
-                        {s.score}%
-                    </span>
-                </td>
-                
-                {/* 5. Submission Time */}
-                <td className="p-4 text-[10px] text-gray-400 font-medium">
-                    {s.date?.seconds ? new Date(s.date.seconds * 1000).toLocaleString([], {hour: '2-digit', minute:'2-digit', day: '2-digit', month:'2-digit'}) : '---'}
-                </td>
-                
-                {/* 6. Delete Button */}
-                <td className="p-4 text-center">
-                    <button 
-                        onClick={async () => { if(confirm("Delete this result?")) await fb.deleteDoc(fb.doc(fb.db, "artifacts/my-project-a6208/scores", s.id)) }} 
-                        className="text-red-400 hover:text-red-600 font-black text-[10px] uppercase transition"
-                    >
-                        Delete
-                    </button>
-                </td>
-            </tr>
-        ))}
-    </tbody>
-</table>ect-a6208/settings/examControl"),{isLive:!examLive})} className="mt-4 w-full bg-slate-900 text-white py-2 rounded-lg font-bold text-xs uppercase">Toggle Live Status</button>
+                                    <button onClick={async()=>await fb.setDoc(fb.doc(fb.db,"artifacts/my-project-a6208/settings/examControl"),{isLive:!examLive})} className="mt-4 w-full bg-slate-900 text-white py-2 rounded-lg font-bold text-xs uppercase">Toggle Live Status</button>
                                 </div>
                                 <div className="bg-white p-6 rounded-2xl shadow border"><p className="text-xs font-bold text-gray-400 uppercase">Questions</p><h3 className="text-2xl font-black">{questions.length}</h3></div>
                                 <div className="bg-white p-6 rounded-2xl shadow border"><p className="text-xs font-bold text-gray-400 uppercase">Submissions</p><h3 className="text-2xl font-black text-blue-600">{scores.length}</h3></div>
@@ -253,20 +230,18 @@
                         const scoreSnap = await fb.getDocs(fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), fb.where("studentId", "==", inputId)));
                         if (!scoreSnap.empty) { alert("Exam Already Submitted."); setLoading(false); return; }
                         
-                        // Database usually contains 'SSS 1', 'SSS 2', or 'SSS 3'
                         const rawClass = found.grade_level || found.class || 'SSS 1';
-                        
                         setStudent({ name: found.full_name, id: inputId, className: rawClass });
                         
                         const qQuery = fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), fb.where("className", "==", rawClass));
                         const snap = await fb.getDocs(qQuery);
                         if(snap.empty) {
-                            alert(`No questions found for ${rawClass}. Ensure Admin added questions for exactly "${rawClass}"`);
+                            alert(`No questions found for ${rawClass}`);
                         } else {
                             setQuestions(snap.docs.map(d => ({id: d.id, ...d.data()})));
                         }
-                    } else alert("Student ID not found in enrollment list.");
-                } catch (e) { alert("System Error: " + e.message); }
+                    } else alert("Student ID not found.");
+                } catch (e) { alert("Error: " + e.message); }
                 setLoading(false);
             };
 
@@ -284,60 +259,56 @@
             }
 
             if (isLive === false) return (
-                <div className="flex flex-col items-center justify-center min-h-screen bg-slate-900 text-white text-center p-6">
-                    <h1 className="text-3xl font-black mb-4 uppercase tracking-tighter">Exam Portal Closed</h1>
-                    <button onClick={()=>setPage('home')} className="bg-blue-600 px-8 py-3 rounded-xl font-bold">Return Home</button>
+                <div className="flex flex-col items-center justify-center min-h-screen bg-slate-900 text-white p-6">
+                    <h1 className="text-3xl font-black mb-4">PORTAL OFFLINE</h1>
+                    <button onClick={()=>setPage('home')} className="bg-blue-600 px-8 py-3 rounded-xl font-bold">Back</button>
                 </div>
             );
 
             if (finished) return (
                 <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center">
                     <div className="bg-white p-10 rounded-3xl shadow-2xl border w-full max-w-md">
-                        <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-16 mx-auto mb-4" />
-                        <h1 className="text-2xl font-black mb-4">Submission Received</h1>
+                        <h1 className="text-2xl font-black mb-4 text-green-600">Submitted!</h1>
                         <div className="bg-blue-50 p-6 rounded-2xl mb-4"><h2 className="text-5xl font-black text-blue-600">{finalScore}%</h2></div>
-                        <p className="font-bold text-gray-400 uppercase text-[10px] tracking-widest">{student.name}</p>
-                        <button onClick={() => setPage('home')} className="mt-8 w-full bg-black text-white py-4 rounded-xl font-black">EXIT SYSTEM</button>
+                        <p className="font-bold">{student.name}</p>
+                        <button onClick={() => setPage('home')} className="mt-8 w-full bg-black text-white py-4 rounded-xl font-black">EXIT</button>
                     </div>
                 </div>
             );
 
             if (!student) return (
                 <div className="flex items-center justify-center min-h-screen p-4">
-                    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm border text-center">
+                    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-sm border text-center">
                         <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-16 mx-auto mb-6" />
-                        <h2 className="text-2xl font-black mb-6 uppercase tracking-tighter">Candidate Login</h2>
-                        <input className="w-full p-4 border rounded-xl mb-4 uppercase text-center font-bold outline-none focus:border-blue-600" placeholder="MS-XXXXX" onChange={e => setMsId(e.target.value)} />
-                        <button onClick={verifyId} className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold uppercase">{loading ? "Validating..." : "Start Exam"}</button>
+                        <h2 className="text-2xl font-black mb-6 uppercase">Student Login</h2>
+                        <input className="w-full p-4 border rounded-xl mb-4 uppercase text-center font-bold" placeholder="MS-XXXXX" onChange={e => setMsId(e.target.value)} />
+                        <button onClick={verifyId} className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold">{loading ? "Wait..." : "Start"}</button>
                     </div>
                 </div>
             );
 
-            if (questions.length === 0) return <div className="p-20 text-center font-black animate-pulse text-blue-600">SYNCHRONIZING QUESTIONS...</div>;
+            if (questions.length === 0) return <div className="p-20 text-center font-black animate-pulse">LOADING...</div>;
 
             return (
                 <div className="max-w-2xl mx-auto p-6 pt-12">
-                    <div className="flex justify-between items-end mb-8 border-b pb-4">
-                        <div>
-                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{student.className}</p>
-                            <h2 className="text-xl font-black uppercase">{student.name}</h2>
-                        </div>
+                    <div className="flex justify-between mb-8 border-b pb-4">
+                        <div><p className="text-[10px] text-gray-400 font-black uppercase">{student.className}</p><h2 className="text-xl font-black uppercase">{student.name}</h2></div>
                         <div className="bg-blue-600 text-white px-4 py-1 rounded-full font-black text-xs">{index + 1} / {questions.length}</div>
                     </div>
                     <div className="bg-white p-8 rounded-2xl shadow-sm border">
                         <p className="text-xl font-bold mb-8">{questions[index].questionText}</p>
                         <div className="space-y-3">
                             {questions[index].options.map((opt, i) => (
-                                <button key={i} onClick={() => setAnswers({...answers, [index]: i})} className={`w-full p-5 text-left rounded-xl border-2 transition font-medium ${answers[index] === i ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border-gray-100 hover:border-blue-200'}`}>
+                                <button key={i} onClick={() => setAnswers({...answers, [index]: i})} className={`w-full p-5 text-left rounded-xl border-2 transition font-medium ${answers[index] === i ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border-gray-100'}`}>
                                     <span className="font-black mr-3">{optionLetters[i]}.</span> {opt}
                                 </button>
                             ))}
                         </div>
                         <div className="mt-10 flex justify-between">
-                            <button onClick={() => setIndex(i => i - 1)} disabled={index === 0} className="text-gray-400 font-black disabled:opacity-0 uppercase text-xs tracking-widest">Previous</button>
+                            <button onClick={() => setIndex(i => i - 1)} disabled={index === 0} className="text-gray-400 font-black disabled:opacity-0 uppercase text-xs">Back</button>
                             {index === questions.length - 1 ? 
-                                <button onClick={finishExam} className="bg-green-600 text-white px-10 py-3 rounded-xl font-bold shadow-lg uppercase">Submit Exam</button> : 
-                                <button onClick={() => setIndex(i => i + 1)} className="bg-blue-600 text-white px-10 py-3 rounded-xl font-bold shadow-lg uppercase">Next Question</button>
+                                <button onClick={finishExam} className="bg-green-600 text-white px-10 py-3 rounded-xl font-bold">SUBMIT</button> : 
+                                <button onClick={() => setIndex(i => i + 1)} className="bg-blue-600 text-white px-10 py-3 rounded-xl font-bold">NEXT</button>
                             }
                         </div>
                     </div>
@@ -349,7 +320,7 @@
             const [page, setPage] = React.useState('home');
             const [ready, setReady] = React.useState(false);
             React.useEffect(() => { const i = setInterval(() => { if(window.fb) { setReady(true); clearInterval(i); }}, 100); }, []);
-            if (!ready) return <div className="p-20 text-center font-black text-blue-600 uppercase tracking-widest">Connecting Database...</div>;
+            if (!ready) return <div className="p-20 text-center font-black text-blue-600 uppercase tracking-widest">Loading...</div>;
 
             return (
                 <AppContext.Provider value={{ setPage }}>
@@ -357,10 +328,10 @@
                         <div className="flex flex-col items-center justify-center min-h-screen text-center p-6">
                             <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-24 mb-6" />
                             <h1 className="text-5xl font-black mb-2 tracking-tighter uppercase">Mustard Seed CBT</h1>
-                            <p className="text-gray-400 font-bold text-sm tracking-widest uppercase mb-10">Excellence in Learning</p>
+                            <p className="text-gray-400 font-bold text-sm tracking-widest uppercase mb-10">Academic Excellence</p>
                             <div className="flex flex-col sm:flex-row gap-4 mt-10">
-                                <button onClick={() => setPage('exam')} className="bg-blue-600 text-white px-16 py-4 rounded-full font-black shadow-xl hover:scale-105 transition">STUDENT LOGIN</button>
-                                <button onClick={() => setPage('admin')} className="bg-white text-gray-500 px-16 py-4 rounded-full font-bold border shadow-sm hover:bg-gray-50 transition">ADMIN PANEL</button>
+                                <button onClick={() => setPage('exam')} className="bg-blue-600 text-white px-16 py-4 rounded-full font-black shadow-xl">START EXAM</button>
+                                <button onClick={() => setPage('admin')} className="bg-white text-gray-500 px-16 py-4 rounded-full font-bold border">ADMIN PANEL</button>
                             </div>
                         </div>
                     )}
@@ -373,4 +344,3 @@
     </script>
 </body>
 </html>
-

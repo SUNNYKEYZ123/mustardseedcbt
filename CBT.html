@@ -105,27 +105,7 @@
                                         {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
                                     </select>
                                 </div>
-                                <table className="w-full text-left">
-                                    <thead className="bg-white border-b text-[10px] font-black uppercase text-gray-400">
-                                        <tr><th className="p-4">Student ID & Name</th><th className="p-4">Class</th><th className="p-4">Score</th><th className="p-4">Percentage</th><th className="p-4 text-center">Action</th></tr>
-                                    </thead>
-                                    <tbody className="text-sm">
-                                        {scores.filter(s=>resFilter==='ALL'||s.className===resFilter).map(s=>(
-                                            <tr key={s.id} className="border-b hover:bg-blue-50">
-                                                <td className="p-4">
-                                                    <p className="text-[10px] text-blue-600 font-mono font-bold">{s.studentId}</p>
-                                                    <p className="font-bold uppercase">{s.studentName}</p>
-                                                </td>
-                                                <td className="p-4 font-bold text-gray-500">{s.className}</td>
-                                                <td className="p-4 font-black">{s.correctAnswers}/{s.totalQuestions}</td>
-                                                <td className="p-4 font-black text-blue-600">{s.score}%</td>
-                                                <td className="p-4 text-center">
-                                                    <button onClick={async()=> {if(confirm("Delete this result?")) await fb.deleteDoc(fb.doc(fb.db,"artifacts/my-project-a6208/scores",s.id))}} className="bg-red-50 text-red-500 px-3 py-1 rounded-full text-[10px] font-black hover:bg-red-500 hover:text-white transition">DELETE</button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                
                             </div>
                         )}
 
@@ -134,7 +114,67 @@
                                 <div className="bg-white p-6 rounded-2xl shadow border">
                                     <p className="text-xs font-bold text-gray-400 uppercase">Exam Mode</p>
                                     <h3 className={`text-2xl font-black ${examLive?'text-green-500':'text-red-500'}`}>{examLive?'LIVE':'OFFLINE'}</h3>
-                                    <button onClick={async()=>await fb.setDoc(fb.doc(fb.db,"artifacts/my-project-a6208/settings/examControl"),{isLive:!examLive})} className="mt-4 w-full bg-slate-900 text-white py-2 rounded-lg font-bold text-xs uppercase">Toggle Live Status</button>
+                                    <button onClick={async()=>await fb.setDoc(fb.doc(fb.db,"artifacts/my-proj<table className="w-full text-left">
+    <thead className="bg-gray-100 border-b text-[10px] font-black uppercase text-gray-500">
+        <tr>
+            <th className="p-4">Student ID</th>
+            <th className="p-4">Candidate & Class</th>
+            <th className="p-4">Raw Score</th>
+            <th className="p-4">Percentage</th>
+            <th className="p-4">Time</th>
+            <th className="p-4 text-center">Action</th>
+        </tr>
+    </thead>
+    <tbody className="text-sm">
+        {scores.filter(s => resFilter === 'ALL' || s.className === resFilter).map(s => (
+            <tr key={s.id} className="border-b hover:bg-gray-50 transition">
+                {/* 1. Student ID */}
+                <td className="p-4 font-mono font-bold text-gray-400 text-xs">
+                    {s.studentId}
+                </td>
+                
+                {/* 2. Name & Class (Below Name) */}
+                <td className="p-4">
+                    <p className="font-black uppercase text-slate-800 leading-none">{s.studentName}</p>
+                    <p className="text-[9px] text-blue-600 font-bold uppercase mt-1">
+                        {s.className || "ARCHIVE"}
+                    </p>
+                </td>
+                
+                {/* 3. Raw Score */}
+                <td className="p-4 font-bold text-slate-600">
+                    {s.correctAnswers} <span className="text-gray-300 mx-1">/</span> {s.totalQuestions}
+                </td>
+                
+                {/* 4. Color-Formatted Percentage */}
+                <td className="p-4">
+                    <span className={`px-3 py-1 rounded-full text-xs font-black shadow-sm border ${
+                        s.score >= 70 ? 'bg-green-100 text-green-700 border-green-200' : 
+                        s.score >= 50 ? 'bg-blue-100 text-blue-700 border-blue-200' : 
+                        'bg-red-100 text-red-700 border-red-200'
+                    }`}>
+                        {s.score}%
+                    </span>
+                </td>
+                
+                {/* 5. Submission Time */}
+                <td className="p-4 text-[10px] text-gray-400 font-medium">
+                    {s.date?.seconds ? new Date(s.date.seconds * 1000).toLocaleString([], {hour: '2-digit', minute:'2-digit', day: '2-digit', month:'2-digit'}) : '---'}
+                </td>
+                
+                {/* 6. Delete Button */}
+                <td className="p-4 text-center">
+                    <button 
+                        onClick={async () => { if(confirm("Delete this result?")) await fb.deleteDoc(fb.doc(fb.db, "artifacts/my-project-a6208/scores", s.id)) }} 
+                        className="text-red-400 hover:text-red-600 font-black text-[10px] uppercase transition"
+                    >
+                        Delete
+                    </button>
+                </td>
+            </tr>
+        ))}
+    </tbody>
+</table>ect-a6208/settings/examControl"),{isLive:!examLive})} className="mt-4 w-full bg-slate-900 text-white py-2 rounded-lg font-bold text-xs uppercase">Toggle Live Status</button>
                                 </div>
                                 <div className="bg-white p-6 rounded-2xl shadow border"><p className="text-xs font-bold text-gray-400 uppercase">Questions</p><h3 className="text-2xl font-black">{questions.length}</h3></div>
                                 <div className="bg-white p-6 rounded-2xl shadow border"><p className="text-xs font-bold text-gray-400 uppercase">Submissions</p><h3 className="text-2xl font-black text-blue-600">{scores.length}</h3></div>
@@ -333,3 +373,4 @@
     </script>
 </body>
 </html>
+

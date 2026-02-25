@@ -4,7 +4,7 @@
     <link rel="icon" type="image/x-icon" href="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mustard Seed CBT - Class Fixed</title>
+    <title>Mustard Seed CBT - Fixed Classes</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -45,7 +45,8 @@
         const AppContext = React.createContext(null);
         const ADMIN_PASSWORD = 'SUNNYKEYZ2025@';
         const optionLetters = ['A', 'B', 'C', 'D'];
-        const CLASSES = ['SS1', 'SS2', 'SS3'];
+        // UPDATED TO MATCH YOUR DATABASE
+        const CLASSES = ['SSS 1', 'SSS 2', 'SSS 3'];
 
         const AdminPage = () => {
             const { setPage } = React.useContext(AppContext);
@@ -55,29 +56,29 @@
             const [scores, setScores] = React.useState([]);
             const [questions, setQuestions] = React.useState([]);
             const [examLive, setExamLive] = React.useState(false);
-            const [newQ, setNewQ] = React.useState({ text: '', options: ['', '', '', ''], correct: 0, className: 'SS1' });
+            const [newQ, setNewQ] = React.useState({ text: '', options: ['', '', '', ''], correct: 0, className: 'SSS 1' });
             const [resFilter, setResFilter] = React.useState('ALL');
 
             React.useEffect(() => {
                 if (!auth) return;
-                const unsub1 = fb.onSnapshot(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), (s) => {
+                fb.onSnapshot(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), (s) => {
                     setScores(s.docs.map(d => ({id: d.id, ...d.data()})).sort((a, b) => (b.date?.seconds || 0) - (a.date?.seconds || 0)));
                 });
-                const unsub2 = fb.onSnapshot(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), (s) => {
+                fb.onSnapshot(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), (s) => {
                     setQuestions(s.docs.map(d => ({id: d.id, ...d.data()})));
                 });
-                const unsub3 = fb.onSnapshot(fb.doc(fb.db, "artifacts/my-project-a6208/settings/examControl"), (doc) => {
+                fb.onSnapshot(fb.doc(fb.db, "artifacts/my-project-a6208/settings/examControl"), (doc) => {
                     if (doc.exists()) setExamLive(doc.data().isLive);
                 });
-                return () => { unsub1(); unsub2(); unsub3(); };
             }, [auth]);
 
             if (!auth) return (
-                <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
-                    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm text-center">
-                        <h2 className="text-xl font-black mb-4 uppercase">Admin Access</h2>
+                <div className="flex items-center justify-center min-h-screen bg-gray-100">
+                    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm text-center border">
+                        <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-16 mx-auto mb-4" />
+                        <h2 className="text-xl font-black mb-4 uppercase">Admin Login</h2>
                         <input type="password" placeholder="Password" className="w-full p-3 border rounded-lg mb-4 text-center" onChange={e => setPass(e.target.value)} />
-                        <button onClick={() => pass === ADMIN_PASSWORD ? setAuth(true) : alert("Access Denied")} className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold">Login</button>
+                        <button onClick={() => pass === ADMIN_PASSWORD ? setAuth(true) : alert("Wrong Password")} className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold">Access Panel</button>
                     </div>
                 </div>
             );
@@ -95,38 +96,32 @@
                     </aside>
 
                     <main className="flex-1 ml-64 p-10">
-                        {activeTab === 'dashboard' && (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div className="bg-white p-6 rounded-2xl shadow border">
-                                    <p className="text-xs font-bold text-gray-400 uppercase">Status</p>
-                                    <h3 className={`text-2xl font-black ${examLive?'text-green-500':'text-red-500'}`}>{examLive?'LIVE':'OFFLINE'}</h3>
-                                    <button onClick={async()=>await fb.setDoc(fb.doc(fb.db,"artifacts/my-project-a6208/settings/examControl"),{isLive:!examLive})} className="mt-4 w-full bg-slate-900 text-white py-2 rounded-lg font-bold text-xs uppercase">Toggle Exam</button>
-                                </div>
-                                <div className="bg-white p-6 rounded-2xl shadow border"><p className="text-xs font-bold text-gray-400 uppercase">Questions</p><h3 className="text-2xl font-black">{questions.length}</h3></div>
-                                <div className="bg-white p-6 rounded-2xl shadow border"><p className="text-xs font-bold text-gray-400 uppercase">Submissions</p><h3 className="text-2xl font-black text-blue-600">{scores.length}</h3></div>
-                            </div>
-                        )}
-
                         {activeTab === 'results' && (
                             <div className="bg-white rounded-2xl shadow border overflow-hidden">
                                 <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+                                    <h2 className="font-black uppercase text-sm">Exam Records</h2>
                                     <select value={resFilter} onChange={e=>setResFilter(e.target.value)} className="p-1 border rounded text-xs font-bold">
                                         <option value="ALL">All Classes</option>
-                                        {CLASSES.map(c => <option key={c} value={c}>{c} Only</option>)}
+                                        {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
                                     </select>
-                                    <button onClick={async()=>{if(confirm("Clear ALL?")){const b=fb.writeBatch(fb.db);scores.forEach(s=>b.delete(fb.doc(fb.db,"artifacts/my-project-a6208/scores",s.id)));await b.commit();}}} className="text-red-500 font-bold text-xs uppercase">Reset All</button>
                                 </div>
                                 <table className="w-full text-left">
                                     <thead className="bg-white border-b text-[10px] font-black uppercase text-gray-400">
-                                        <tr><th className="p-4">Student</th><th className="p-4">Score</th><th className="p-4">Grade</th><th className="p-4">Time</th></tr>
+                                        <tr><th className="p-4">Student ID & Name</th><th className="p-4">Class</th><th className="p-4">Score</th><th className="p-4">Percentage</th><th className="p-4 text-center">Action</th></tr>
                                     </thead>
                                     <tbody className="text-sm">
                                         {scores.filter(s=>resFilter==='ALL'||s.className===resFilter).map(s=>(
-                                            <tr key={s.id} className="border-b hover:bg-blue-50/50">
-                                                <td className="p-4"><p className="font-bold">{s.studentName}</p><span className="text-blue-500 text-[9px] font-black uppercase">[{s.className || "PREVIOUS RECORD"}]</span></td>
+                                            <tr key={s.id} className="border-b hover:bg-blue-50">
+                                                <td className="p-4">
+                                                    <p className="text-[10px] text-blue-600 font-mono font-bold">{s.studentId}</p>
+                                                    <p className="font-bold uppercase">{s.studentName}</p>
+                                                </td>
+                                                <td className="p-4 font-bold text-gray-500">{s.className}</td>
                                                 <td className="p-4 font-black">{s.correctAnswers}/{s.totalQuestions}</td>
-                                                <td className="p-4"><span className={`px-2 py-1 rounded font-black ${s.score>=50?'text-green-600':'text-red-600'}`}>{s.score}%</span></td>
-                                                <td className="p-4 text-[10px] text-gray-400">{s.date?.toDate?s.date.toDate().toLocaleString():'Archive'}</td>
+                                                <td className="p-4 font-black text-blue-600">{s.score}%</td>
+                                                <td className="p-4 text-center">
+                                                    <button onClick={async()=> {if(confirm("Delete this result?")) await fb.deleteDoc(fb.doc(fb.db,"artifacts/my-project-a6208/scores",s.id))}} className="bg-red-50 text-red-500 px-3 py-1 rounded-full text-[10px] font-black hover:bg-red-500 hover:text-white transition">DELETE</button>
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -134,11 +129,23 @@
                             </div>
                         )}
 
+                        {activeTab === 'dashboard' && (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="bg-white p-6 rounded-2xl shadow border">
+                                    <p className="text-xs font-bold text-gray-400 uppercase">Exam Mode</p>
+                                    <h3 className={`text-2xl font-black ${examLive?'text-green-500':'text-red-500'}`}>{examLive?'LIVE':'OFFLINE'}</h3>
+                                    <button onClick={async()=>await fb.setDoc(fb.doc(fb.db,"artifacts/my-project-a6208/settings/examControl"),{isLive:!examLive})} className="mt-4 w-full bg-slate-900 text-white py-2 rounded-lg font-bold text-xs uppercase">Toggle Live Status</button>
+                                </div>
+                                <div className="bg-white p-6 rounded-2xl shadow border"><p className="text-xs font-bold text-gray-400 uppercase">Questions</p><h3 className="text-2xl font-black">{questions.length}</h3></div>
+                                <div className="bg-white p-6 rounded-2xl shadow border"><p className="text-xs font-bold text-gray-400 uppercase">Submissions</p><h3 className="text-2xl font-black text-blue-600">{scores.length}</h3></div>
+                            </div>
+                        )}
+
                         {activeTab === 'questions' && (
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                                 <section className="bg-white p-6 rounded-2xl shadow border h-fit sticky top-10">
-                                    <h2 className="text-xl font-black mb-4">New Question</h2>
-                                    <textarea className="w-full p-4 border rounded-xl mb-4 bg-gray-50 focus:bg-white transition" placeholder="Enter Question Question..." value={newQ.text} onChange={e=>setNewQ({...newQ, text:e.target.value})} />
+                                    <h2 className="text-xl font-black mb-4 uppercase">New Question</h2>
+                                    <textarea className="w-full p-4 border rounded-xl mb-4 bg-gray-50" placeholder="Question Text..." value={newQ.text} onChange={e=>setNewQ({...newQ, text:e.target.value})} />
                                     <div className="grid grid-cols-2 gap-2 mb-4">
                                         {newQ.options.map((o,i)=>(<input key={i} className="p-2 border rounded" placeholder={`Option ${optionLetters[i]}`} value={o} onChange={e=>{let c=[...newQ.options];c[i]=e.target.value;setNewQ({...newQ,options:c})}} />))}
                                     </div>
@@ -151,20 +158,24 @@
                                         </select>
                                     </div>
                                     <button onClick={async()=>{
-                                        if(!newQ.text) return alert("Empty!");
+                                        if(!newQ.text) return alert("Empty Question!");
                                         await fb.addDoc(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), {
                                             questionText: newQ.text, options: newQ.options, 
                                             correctOptionIndex: parseInt(newQ.correct), className: newQ.className
                                         });
-                                        setNewQ({ ...newQ, text: '', options: ['', '', '', ''] });
-                                        alert("Saved Successfully!");
+                                        setNewQ({ ...newQ, text: '', options: ['', '', '', ''], correct: 0, className: newQ.className });
+                                        alert("Question Added!");
                                     }} className="w-full mt-4 bg-blue-600 text-white py-3 rounded-xl font-bold uppercase shadow-lg">Save Question</button>
                                 </section>
                                 <section className="space-y-2">
+                                    <h2 className="font-black text-gray-400 text-xs uppercase mb-4">Existing Bank ({questions.length})</h2>
                                     {questions.map((q)=>(
                                         <div key={q.id} className="bg-white p-4 rounded-xl border flex justify-between items-center shadow-sm">
-                                            <div><span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 rounded uppercase">{q.className}</span><p className="font-bold text-sm">{q.questionText}</p></div>
-                                            <button onClick={async()=>await fb.deleteDoc(fb.doc(fb.db,"artifacts/my-project-a6208/public/data/questions",q.id))} className="text-red-400 font-bold text-xs">Delete</button>
+                                            <div className="pr-4">
+                                                <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase">{q.className}</span>
+                                                <p className="font-bold text-sm mt-1">{q.questionText}</p>
+                                            </div>
+                                            <button onClick={async()=>await fb.deleteDoc(fb.doc(fb.db,"artifacts/my-project-a6208/public/data/questions",q.id))} className="text-red-400 font-bold text-xs hover:text-red-600">DEL</button>
                                         </div>
                                     ))}
                                 </section>
@@ -202,21 +213,25 @@
                         const scoreSnap = await fb.getDocs(fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), fb.where("studentId", "==", inputId)));
                         if (!scoreSnap.empty) { alert("Exam Already Submitted."); setLoading(false); return; }
                         
-                        // FIX: Detect both column names
-                        const sClass = found.grade_level || found.class || 'SS1';
-                        setStudent({ name: found.full_name, id: inputId, className: sClass });
+                        // Database usually contains 'SSS 1', 'SSS 2', or 'SSS 3'
+                        const rawClass = found.grade_level || found.class || 'SSS 1';
                         
-                        const qQuery = fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), fb.where("className", "==", sClass));
+                        setStudent({ name: found.full_name, id: inputId, className: rawClass });
+                        
+                        const qQuery = fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), fb.where("className", "==", rawClass));
                         const snap = await fb.getDocs(qQuery);
-                        if(snap.empty) alert(`No questions found for ${sClass}`);
-                        else setQuestions(snap.docs.map(d => ({id: d.id, ...d.data()})));
-                    } else alert("ID Not Found. Check if student is 'Enrolled'.");
-                } catch (e) { alert("Error: " + e.message); }
+                        if(snap.empty) {
+                            alert(`No questions found for ${rawClass}. Ensure Admin added questions for exactly "${rawClass}"`);
+                        } else {
+                            setQuestions(snap.docs.map(d => ({id: d.id, ...d.data()})));
+                        }
+                    } else alert("Student ID not found in enrollment list.");
+                } catch (e) { alert("System Error: " + e.message); }
                 setLoading(false);
             };
 
             async function finishExam() {
-                if (!confirm("Submit Exam Now?")) return;
+                if (!confirm("Submit Exam?")) return;
                 let correct = 0;
                 questions.forEach((q, i) => { if (answers[i] === q.correctOptionIndex) correct++; });
                 const pct = questions.length > 0 ? Math.round((correct / questions.length) * 100) : 0;
@@ -228,14 +243,20 @@
                 setFinished(true);
             }
 
-            if (isLive === false) return <div className="flex flex-col items-center justify-center min-h-screen bg-slate-900 text-white text-center p-6"><h1 className="text-2xl font-black mb-4 uppercase">Portal Offline</h1><button onClick={()=>setPage('home')} className="bg-blue-600 px-6 py-2 rounded-xl">Home</button></div>;
+            if (isLive === false) return (
+                <div className="flex flex-col items-center justify-center min-h-screen bg-slate-900 text-white text-center p-6">
+                    <h1 className="text-3xl font-black mb-4 uppercase tracking-tighter">Exam Portal Closed</h1>
+                    <button onClick={()=>setPage('home')} className="bg-blue-600 px-8 py-3 rounded-xl font-bold">Return Home</button>
+                </div>
+            );
 
             if (finished) return (
                 <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center">
                     <div className="bg-white p-10 rounded-3xl shadow-2xl border w-full max-w-md">
-                        <h1 className="text-2xl font-black mb-4 uppercase">Exam Finished!</h1>
+                        <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-16 mx-auto mb-4" />
+                        <h1 className="text-2xl font-black mb-4">Submission Received</h1>
                         <div className="bg-blue-50 p-6 rounded-2xl mb-4"><h2 className="text-5xl font-black text-blue-600">{finalScore}%</h2></div>
-                        <p className="font-bold text-gray-400 uppercase text-[10px]">{student.name}</p>
+                        <p className="font-bold text-gray-400 uppercase text-[10px] tracking-widest">{student.name}</p>
                         <button onClick={() => setPage('home')} className="mt-8 w-full bg-black text-white py-4 rounded-xl font-black">EXIT SYSTEM</button>
                     </div>
                 </div>
@@ -245,19 +266,22 @@
                 <div className="flex items-center justify-center min-h-screen p-4">
                     <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm border text-center">
                         <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-16 mx-auto mb-6" />
-                        <h2 className="text-2xl font-black mb-6 uppercase">Student Login</h2>
-                        <input className="w-full p-4 border rounded-xl mb-4 uppercase text-center font-bold" placeholder="MS-XXXXX" onChange={e => setMsId(e.target.value)} />
-                        <button onClick={verifyId} className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold uppercase">{loading ? "Logging in..." : "Start Exam"}</button>
+                        <h2 className="text-2xl font-black mb-6 uppercase tracking-tighter">Candidate Login</h2>
+                        <input className="w-full p-4 border rounded-xl mb-4 uppercase text-center font-bold outline-none focus:border-blue-600" placeholder="MS-XXXXX" onChange={e => setMsId(e.target.value)} />
+                        <button onClick={verifyId} className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold uppercase">{loading ? "Validating..." : "Start Exam"}</button>
                     </div>
                 </div>
             );
 
-            if (questions.length === 0) return <div className="p-20 text-center font-black animate-pulse">LOADING QUESTIONS...</div>;
+            if (questions.length === 0) return <div className="p-20 text-center font-black animate-pulse text-blue-600">SYNCHRONIZING QUESTIONS...</div>;
 
             return (
                 <div className="max-w-2xl mx-auto p-6 pt-12">
                     <div className="flex justify-between items-end mb-8 border-b pb-4">
-                        <div><p className="text-[10px] text-gray-400 font-black uppercase">{student.className} Candidate</p><h2 className="text-xl font-black uppercase">{student.name}</h2></div>
+                        <div>
+                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{student.className}</p>
+                            <h2 className="text-xl font-black uppercase">{student.name}</h2>
+                        </div>
                         <div className="bg-blue-600 text-white px-4 py-1 rounded-full font-black text-xs">{index + 1} / {questions.length}</div>
                     </div>
                     <div className="bg-white p-8 rounded-2xl shadow-sm border">
@@ -270,10 +294,10 @@
                             ))}
                         </div>
                         <div className="mt-10 flex justify-between">
-                            <button onClick={() => setIndex(i => i - 1)} disabled={index === 0} className="text-gray-400 font-black disabled:opacity-0 uppercase text-xs">Back</button>
+                            <button onClick={() => setIndex(i => i - 1)} disabled={index === 0} className="text-gray-400 font-black disabled:opacity-0 uppercase text-xs tracking-widest">Previous</button>
                             {index === questions.length - 1 ? 
                                 <button onClick={finishExam} className="bg-green-600 text-white px-10 py-3 rounded-xl font-bold shadow-lg uppercase">Submit Exam</button> : 
-                                <button onClick={() => setIndex(i => i + 1)} className="bg-blue-600 text-white px-10 py-3 rounded-xl font-bold shadow-lg uppercase">Next</button>
+                                <button onClick={() => setIndex(i => i + 1)} className="bg-blue-600 text-white px-10 py-3 rounded-xl font-bold shadow-lg uppercase">Next Question</button>
                             }
                         </div>
                     </div>
@@ -293,9 +317,10 @@
                         <div className="flex flex-col items-center justify-center min-h-screen text-center p-6">
                             <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-24 mb-6" />
                             <h1 className="text-5xl font-black mb-2 tracking-tighter uppercase">Mustard Seed CBT</h1>
+                            <p className="text-gray-400 font-bold text-sm tracking-widest uppercase mb-10">Excellence in Learning</p>
                             <div className="flex flex-col sm:flex-row gap-4 mt-10">
-                                <button onClick={() => setPage('exam')} className="bg-blue-600 text-white px-16 py-4 rounded-full font-black shadow-xl">STUDENT LOGIN</button>
-                                <button onClick={() => setPage('admin')} className="bg-white text-gray-500 px-16 py-4 rounded-full font-bold border shadow-sm">ADMIN PANEL</button>
+                                <button onClick={() => setPage('exam')} className="bg-blue-600 text-white px-16 py-4 rounded-full font-black shadow-xl hover:scale-105 transition">STUDENT LOGIN</button>
+                                <button onClick={() => setPage('admin')} className="bg-white text-gray-500 px-16 py-4 rounded-full font-bold border shadow-sm hover:bg-gray-50 transition">ADMIN PANEL</button>
                             </div>
                         </div>
                     )}

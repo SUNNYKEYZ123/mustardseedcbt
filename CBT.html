@@ -246,17 +246,31 @@
             };
 
             async function finishExam() {
-                if (!confirm("Submit Exam?")) return;
-                let correct = 0;
-                questions.forEach((q, i) => { if (answers[i] === q.correctOptionIndex) correct++; });
-                const pct = questions.length > 0 ? Math.round((correct / questions.length) * 100) : 0;
-                setFinalScore(pct);
-                await fb.addDoc(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), {
-                    studentName: student.name, studentId: student.id, className: student.className,
-                    score: pct, correctAnswers: correct, totalQuestions: questions.length, date: new Date()
-                });
-                setFinished(true);
-            }
+    if (!confirm("Submit Exam?")) return;
+    let correct = 0;
+    questions.forEach((q, i) => { if (answers[i] === q.correctOptionIndex) correct++; });
+    
+    // 1. Calculate the marks for the Admin Panel
+    const totalMarks = correct * 2;
+    
+    // 2. Calculate the percentage for the Student to see
+    const pct = questions.length > 0 ? Math.round((correct / questions.length) * 100) : 0;
+    
+    // 3. IMPORTANT: Use 'pct' here so the student only sees the percentage
+    setFinalScore(pct);
+    
+    await fb.addDoc(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), {
+        studentName: student.name, 
+        studentId: student.id, 
+        className: student.className,
+        score: totalMarks,        // This goes to your Admin Panel (2 marks each)
+        percentage: pct,         // This is the percentage record
+        correctAnswers: correct, 
+        totalQuestions: questions.length, 
+        date: new Date()
+    });
+    setFinished(true);
+}
 
             if (isLive === false) return (
                 <div className="flex flex-col items-center justify-center min-h-screen bg-slate-900 text-white p-6">
@@ -344,4 +358,5 @@
     </script>
 </body>
 </html>
+
 

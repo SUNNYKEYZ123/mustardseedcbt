@@ -221,51 +221,31 @@
             }, []);
 
             const verifyId = async () => {
-    setLoading(true);
-    // Remove extra spaces and make it uppercase for safety
-    const inputId = msId.trim().toUpperCase();
-    
-    try {
-        // Fetch students from Supabase
-        const { data } = await _supabase.from('students').select('*').eq('status', 'Enrolled');
-        
-        // RESTORED LOGIC: Look for the ID exactly as it is in the database
-        // No .substring(0,5) to destroy the ID length
-        const found = data?.find(s => {
-            const dbId = String(s.id).toUpperCase().trim();
-            // This checks if they typed the ID exactly OR added the MS- prefix
-            return dbId === inputId || ("MS-" + dbId) === inputId;
-        });
+                setLoading(true);
+                const inputId = msId.toUpperCase().trim();
+                try {
+                    const { data } = await _supabase.from('students').select('*').eq('status', 'Enrolled');
+                    const found = data?.find(s => ("MS-" + s.id.substring(0, 5).toUpperCase()) === inputId);
+                    
+                    if (found) {
+                        const scoreSnap = await fb.getDocs(fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), fb.where("studentId", "==", inputId)));
+                        if (!scoreSnap.empty) { alert("Exam Already Submitted."); setLoading(false); return; }
+                        
+                        const rawClass = found.grade_level || found.class || 'SSS 1';
+                        setStudent({ name: found.full_name, id: inputId, className: rawClass });
+                        
+                        const qQuery = fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), fb.where("className", "==", rawClass));
+                        const snap = await fb.getDocs(qQuery);
+                        if(snap.empty) {
+                            alert(`No questions found for ${rawClass}`);
+                        } else {
+                            setQuestions(snap.docs.map(d => ({id: d.id, ...d.data()})));
+                        }
+                    } else alert("Student ID not found.");
+                } catch (e) { alert("Error: " + e.message); }
+                setLoading(false);
+            };
 
-        if (found) {
-            // Check Firebase for previous submission
-            const scoreSnap = await fb.getDocs(fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), fb.where("studentId", "==", inputId)));
-            if (!scoreSnap.empty) { 
-                alert("Exam Already Submitted."); 
-                setLoading(false); 
-                return; 
-            }
-
-            // Get the class (Handling grade_level or class field)
-            const rawClass = found.grade_level || found.class || 'SSS 1';
-            setStudent({ name: found.full_name, id: inputId, className: rawClass });
-
-            // Load Questions
-            const qQuery = fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), fb.where("className", "==", rawClass));
-            const snap = await fb.getDocs(qQuery);
-            if(snap.empty) {
-                alert(`No questions found for ${rawClass}`);
-            } else {
-                setQuestions(snap.docs.map(d => ({id: d.id, ...d.data()})));
-            }
-        } else {
-            alert(`Student ID "${inputId}" not found. Try your full ID.`);
-        }
-    } catch (e) { 
-        alert("Error: " + e.message); 
-    }
-    setLoading(false);
-};
             async function finishExam() {
     if (!confirm("Submit Exam?")) return;
     let correct = 0;
@@ -379,7 +359,3 @@
     </script>
 </body>
 </html>
-
-
-
-

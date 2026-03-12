@@ -96,7 +96,7 @@
                     <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm text-center">
                         <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-16 mx-auto mb-4" />
                         <h2 className="text-xl font-black mb-4 uppercase">Admin Login</h2>
-                        <input type="password" placeholder="Password" className="w-full p-3 border rounded-lg mb-4 text-center" onChange={e => setPass(e.target.value)} />
+                        <input type="password" placeholder="Password" className="w-full p-3 border rounded-lg mb-4 text-center font-bold" onChange={e => setPass(e.target.value)} />
                         <button onClick={() => pass === ADMIN_PASSWORD ? setAuth(true) : alert("Wrong Password")} className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold">Access Panel</button>
                     </div>
                 </div>
@@ -308,56 +308,38 @@
             const [answers, setAnswers] = React.useState({});
             const [finished, setFinished] = React.useState(false);
             const [msId, setMsId] = React.useState('');
+            const [loading, setLoading] = React.useState(false); // Added missing loading state
             const [finalResult, setFinalResult] = React.useState(null);
 
             const verifyId = async () => {
                 if (!msId) return alert("Please enter your Student ID");
                 
-                setLoading(true); // Start the loading animation
+                setLoading(true); // Start animation
                 const inputId = msId.toUpperCase().trim();
                 
                 try {
-                    // 1. Fetch enrolled students from Supabase
-                    const { data, error } = await _supabase
-                        .from('students')
-                        .select('*')
-                        .eq('status', 'Enrolled');
-                    
+                    const { data, error } = await _supabase.from('students').select('*').eq('status', 'Enrolled');
                     if (error) throw error;
 
-                    // 2. Locate student by partial or full ID match (e.g., MS-XXXXX)
                     const found = data?.find(s => {
                         const dbId = s.id.toString().toUpperCase();
                         return ("MS-" + dbId.substring(0, 5)) === inputId || ("MS-" + dbId) === inputId;
                     });
 
                     if (found) {
-                        // 3. Block access if a result already exists in Firebase for this ID
-                        const scoreCheck = await fb.getDocs(
-                            fb.query(
-                                fb.collection(fb.db, "artifacts/my-project-a6208/scores"), 
-                                fb.where("studentId", "==", inputId)
-                            )
-                        );
-                        
+                        const scoreCheck = await fb.getDocs(fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), fb.where("studentId", "==", inputId)));
                         if (!scoreCheck.empty) { 
                             alert("This ID has already submitted an exam."); 
                             setLoading(false); 
                             return; 
                         }
 
-                        // 4. Set student details and load questions for their class
                         const sClass = found.grade_level || found.class || 'SSS 1';
                         setStudent({ name: found.full_name, id: inputId, className: sClass });
 
-                        const qSnap = await fb.getDocs(
-                            fb.query(
-                                fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), 
-                                fb.where("className", "==", sClass)
-                            )
-                        );
+                        const qSnap = await fb.getDocs(fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), fb.where("className", "==", sClass)));
                         
-                        if(qSnap.empty) {
+                        if (qSnap.empty) {
                             alert(`No questions found for ${sClass}`);
                         } else {
                             setQuestions(qSnap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -367,10 +349,11 @@
                     }
                 } catch (e) {
                     console.error(e);
-                    alert("Connection Error. Please try again.");
+                    alert("Connection Error.");
                 }
-                setLoading(false); // Stop the loading animation
+                setLoading(false); // Stop animation
             };
+
             async function finish() {
                 if (!confirm("Confirm submission?")) return;
                 let objRaw = 0, objTotal = 0, thyRaw = 0, thyTotal = 0;
@@ -424,7 +407,15 @@
                         <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-16 mx-auto mb-8" />
                         <h2 className="text-xl font-black mb-8 uppercase text-slate-800">CBT Login</h2>
                         <input className="w-full p-5 border-2 border-slate-100 rounded-3xl mb-4 text-center font-black uppercase text-blue-600" placeholder="MS-XXXXX" onChange={e => setMsId(e.target.value)} />
-                        <button onClick={verifyId} className="w-full py-5 bg-blue-600 text-white rounded-[2rem] font-black shadow-xl shadow-blue-100">BEGIN TEST</button>
+                        
+                        <button onClick={verifyId} disabled={loading} className="w-full py-5 bg-blue-600 text-white rounded-[2rem] font-black shadow-xl shadow-blue-100 flex items-center justify-center gap-3">
+                            {loading ? (
+                                <>
+                                    <div className="w-5 h-5 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    <span>VERIFYING...</span>
+                                </>
+                            ) : "BEGIN TEST"}
+                        </button>
                     </div>
                 </div>
             );
@@ -495,4 +486,3 @@
     </script>
 </body>
 </html>
-

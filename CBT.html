@@ -311,16 +311,66 @@
             const [finalResult, setFinalResult] = React.useState(null);
 
             const verifyId = async () => {
+                if (!msId) return alert("Please enter your Student ID");
+                
+                setLoading(true); // Start the loading animation
                 const inputId = msId.toUpperCase().trim();
-                const { data } = await _supabase.from('students').select('*').eq('status', 'Enrolled');
-                const found = data?.find(s => ("MS-" + s.id.substring(0, 5).toUpperCase()) === inputId);
-                if (found) {
-                    setStudent({ name: found.full_name, id: inputId, className: found.grade_level || 'SSS 1' });
-                    const snap = await fb.getDocs(fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), fb.where("className", "==", found.grade_level || 'SSS 1')));
-                    setQuestions(snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => (a.type === 'theory' ? 1 : -1)));
-                } else alert("ID not recognized.");
-            };
+                
+                try {
+                    // 1. Fetch enrolled students from Supabase
+                    const { data, error } = await _supabase
+                        .from('students')
+                        .select('*')
+                        .eq('status', 'Enrolled');
+                    
+                    if (error) throw error;
 
+                    // 2. Locate student by partial or full ID match (e.g., MS-XXXXX)
+                    const found = data?.find(s => {
+                        const dbId = s.id.toString().toUpperCase();
+                        return ("MS-" + dbId.substring(0, 5)) === inputId || ("MS-" + dbId) === inputId;
+                    });
+
+                    if (found) {
+                        // 3. Block access if a result already exists in Firebase for this ID
+                        const scoreCheck = await fb.getDocs(
+                            fb.query(
+                                fb.collection(fb.db, "artifacts/my-project-a6208/scores"), 
+                                fb.where("studentId", "==", inputId)
+                            )
+                        );
+                        
+                        if (!scoreCheck.empty) { 
+                            alert("This ID has already submitted an exam."); 
+                            setLoading(false); 
+                            return; 
+                        }
+
+                        // 4. Set student details and load questions for their class
+                        const sClass = found.grade_level || found.class || 'SSS 1';
+                        setStudent({ name: found.full_name, id: inputId, className: sClass });
+
+                        const qSnap = await fb.getDocs(
+                            fb.query(
+                                fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), 
+                                fb.where("className", "==", sClass)
+                            )
+                        );
+                        
+                        if(qSnap.empty) {
+                            alert(`No questions found for ${sClass}`);
+                        } else {
+                            setQuestions(qSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+                        }
+                    } else {
+                        alert("Student ID Not Recognized.");
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert("Connection Error. Please try again.");
+                }
+                setLoading(false); // Stop the loading animation
+            };
             async function finish() {
                 if (!confirm("Confirm submission?")) return;
                 let objRaw = 0, objTotal = 0, thyRaw = 0, thyTotal = 0;
@@ -445,3 +495,4 @@
     </script>
 </body>
 </html>
+

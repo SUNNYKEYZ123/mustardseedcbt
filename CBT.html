@@ -4,12 +4,19 @@
     <link rel="icon" type="image/x-icon" href="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mustard Seed CBT - Complete Panel</title>
+    <title>Mustard Seed CBT - Professional Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white; }
+        }
+    </style>
 </head>
 <body class="bg-gray-50">
     <div id="root"></div>
@@ -44,118 +51,123 @@
 
         const AppContext = React.createContext(null);
         const ADMIN_PASSWORD = 'SUNNYKEYZ2025@';
-        const optionLetters = ['A', 'B', 'C', 'D'];
         const CLASSES = ['SSS 1', 'SSS 2', 'SSS 3', 'JSS 1', 'JSS 2', 'JSS 3'];
 
         const AdminPage = () => {
-            const { setPage } = React.useContext(AppContext);
             const [auth, setAuth] = React.useState(false);
             const [pass, setPass] = React.useState('');
             const [activeTab, setActiveTab] = React.useState('dashboard'); 
             const [scores, setScores] = React.useState([]);
             const [questions, setQuestions] = React.useState([]);
-            const [examLive, setExamLive] = React.useState(false);
+            const [settings, setSettings] = React.useState({ isLive: false, duration: 40 });
             const [resFilter, setResFilter] = React.useState('ALL');
-            const [selectedReview, setSelectedReview] = React.useState(null);
-            
-            const [newQ, setNewQ] = React.useState({ text: '', options: ['', '', '', ''], correct: 0, className: 'SSS 1', type: 'obj', keywords: '', points: 2 });
+            const [searchQuery, setSearchQuery] = React.useState('');
+            const [reviewData, setReviewData] = React.useState(null);
+            const [newQ, setNewQ] = React.useState({ text: '', options: ['', '', '', ''], correct: 0, className: 'SSS 1', type: 'obj', keywords: '', points: 5 });
 
             React.useEffect(() => {
                 if (!auth) return;
-                fb.onSnapshot(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), (s) => {
-                    setScores(s.docs.map(d => ({id: d.id, ...d.data()})));
-                });
-                fb.onSnapshot(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), (s) => {
-                    setQuestions(s.docs.map(d => ({id: d.id, ...d.data()})));
-                });
-                fb.onSnapshot(fb.doc(fb.db, "artifacts/my-project-a6208/settings/examControl"), (doc) => {
-                    if (doc.exists()) setExamLive(doc.data().isLive);
-                });
+                fb.onSnapshot(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), (s) => setScores(s.docs.map(d => ({id: d.id, ...d.data()}))));
+                fb.onSnapshot(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), (s) => setQuestions(s.docs.map(d => ({id: d.id, ...d.data()}))));
+                fb.onSnapshot(fb.doc(fb.db, "artifacts/my-project-a6208/settings/examControl"), (doc) => { if (doc.exists()) setSettings(doc.data()); });
             }, [auth]);
 
+            const filteredScores = scores.filter(s => {
+                const matchesClass = resFilter === 'ALL' || s.className === resFilter;
+                const matchesSearch = s.studentName.toLowerCase().includes(searchQuery.toLowerCase()) || s.studentId.toLowerCase().includes(searchQuery.toLowerCase());
+                return matchesClass && matchesSearch;
+            });
+
             if (!auth) return (
-                <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
-                    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm text-center border">
-                        <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-16 mx-auto mb-4" />
-                        <h2 className="text-xl font-black mb-4 uppercase">Admin Login</h2>
-                        <input type="password" placeholder="Password" className="w-full p-3 border rounded-lg mb-4 text-center" onChange={e => setPass(e.target.value)} />
-                        <button onClick={() => pass === ADMIN_PASSWORD ? setAuth(true) : alert("Wrong Password")} className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold uppercase">Access</button>
+                <div className="flex items-center justify-center min-h-screen bg-slate-900 p-4">
+                    <div className="bg-white p-10 rounded-3xl shadow-2xl w-full max-w-sm text-center">
+                        <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-20 mx-auto mb-6" />
+                        <h2 className="text-2xl font-black mb-6 uppercase tracking-tight">Admin Gateway</h2>
+                        <input type="password" placeholder="Passcode" className="w-full p-4 border-2 rounded-xl mb-4 text-center font-bold outline-none focus:border-blue-500" onChange={e => setPass(e.target.value)} />
+                        <button onClick={() => pass === ADMIN_PASSWORD ? setAuth(true) : alert("Denied")} className="w-full bg-blue-600 text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-lg">Login</button>
                     </div>
                 </div>
             );
 
             return (
                 <div className="flex min-h-screen bg-gray-50">
-                    <aside className="w-64 bg-slate-900 text-white p-6 fixed h-full hidden md:block">
-                        <h1 className="text-xl font-black mb-10 text-blue-400">ADMIN</h1>
+                    <aside className="w-64 bg-slate-900 text-white p-6 fixed h-full hidden md:block no-print">
+                        <div className="mb-10 text-center">
+                            <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-12 mx-auto mb-2" />
+                            <h1 className="text-sm font-black text-blue-400 uppercase tracking-tighter">Mustard Seed CBT</h1>
+                        </div>
                         <nav className="space-y-2">
-                            <button onClick={()=>setActiveTab('dashboard')} className={`w-full text-left p-3 rounded-lg font-bold ${activeTab==='dashboard'?'bg-blue-600':'text-gray-400'}`}>Dashboard</button>
-                            <button onClick={()=>setActiveTab('questions')} className={`w-full text-left p-3 rounded-lg font-bold ${activeTab==='questions'?'bg-blue-600':'text-gray-400'}`}>Question Bank</button>
-                            <button onClick={()=>setActiveTab('results')} className={`w-full text-left p-3 rounded-lg font-bold ${activeTab==='results'?'bg-blue-600':'text-gray-400'}`}>Results</button>
+                            {['dashboard', 'questions', 'results'].map(tab => (
+                                <button key={tab} onClick={()=>setActiveTab(tab)} className={`w-full text-left p-4 rounded-xl font-black text-[10px] uppercase tracking-widest transition ${activeTab===tab?'bg-blue-600 shadow-lg shadow-blue-900/50':'text-gray-500 hover:text-white'}`}>{tab}</button>
+                            ))}
                         </nav>
                     </aside>
 
                     <main className="flex-1 md:ml-64 p-4 md:p-10">
                         {activeTab === 'results' && (
                             <div className="space-y-6">
-                                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                                    <h2 className="text-2xl font-black uppercase">Results</h2>
-                                    <div className="flex gap-2">
-                                        <select value={resFilter} onChange={e=>setResFilter(e.target.value)} className="p-2 border rounded-lg font-bold text-sm bg-white">
+                                <div className="flex flex-col lg:flex-row justify-between items-end lg:items-center gap-4 no-print">
+                                    <h2 className="text-3xl font-black uppercase tracking-tighter">Student Performance</h2>
+                                    <div className="flex flex-wrap gap-2 justify-end">
+                                        <input type="text" placeholder="Search Name/ID..." className="p-2 border rounded-lg text-xs font-bold w-40" value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} />
+                                        <select value={resFilter} onChange={e=>setResFilter(e.target.value)} className="p-2 border rounded-lg font-bold text-xs bg-white">
                                             <option value="ALL">All Classes</option>
                                             {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
                                         </select>
-                                        <button onClick={async() => {if(confirm("Wipe all data?")) { const b = fb.writeBatch(fb.db); scores.forEach(s => b.delete(fb.doc(fb.db, "artifacts/my-project-a6208/scores", s.id))); await b.commit(); }}} className="bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-xs">WIPE</button>
+                                        <button onClick={() => window.print()} className="bg-slate-800 text-white px-4 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest">Print Report</button>
                                     </div>
                                 </div>
                                 
-                                <div className="bg-white rounded-2xl shadow-xl border overflow-x-auto">
-                                    <table className="w-full text-left min-w-[600px]">
-                                        <thead className="bg-gray-100 border-b text-[10px] font-black uppercase text-gray-500">
+                                <div className="bg-white rounded-3xl shadow-xl border overflow-hidden">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead className="bg-slate-50 border-b text-[9px] font-black uppercase text-gray-400 tracking-[0.2em]">
                                             <tr>
-                                                <th className="p-4">Name</th>
-                                                <th className="p-4 text-center">OBJ</th>
-                                                <th className="p-4 text-center">THY</th>
-                                                <th className="p-4 text-center">TOTAL</th>
-                                                <th className="p-4">TIME</th>
-                                                <th className="p-4 text-center">ACTION</th>
+                                                <th className="p-5">Student Identity</th>
+                                                <th className="p-5">OBJ</th>
+                                                <th className="p-5">Theory</th>
+                                                <th className="p-5">Total</th>
+                                                <th className="p-5">Submitted</th>
+                                                <th className="p-5 no-print">Status</th>
                                             </tr>
                                         </thead>
                                         <tbody className="text-sm">
-                                            {scores.filter(s=>resFilter==='ALL'||s.className===resFilter).map(s=>(
-                                                <tr key={s.id} className="border-b hover:bg-blue-50 cursor-pointer" onClick={() => setSelectedReview(s)}>
-                                                    <td className="p-4 font-black uppercase text-slate-800">
-                                                        {s.studentName}<br/><span className="text-[10px] text-blue-500 font-mono">{s.studentId}</span>
+                                            {filteredScores.map(s=>(
+                                                <tr key={s.id} className="border-b hover:bg-blue-50/50 transition cursor-pointer" onClick={() => setReviewData(s)}>
+                                                    <td className="p-5">
+                                                        <p className="font-black text-slate-800 uppercase leading-none mb-1">{s.studentName}</p>
+                                                        <span className="text-[10px] font-mono text-blue-500 font-bold uppercase">{s.studentId} • {s.className}</span>
                                                     </td>
-                                                    <td className="p-4 text-center font-bold">{s.objScore || 0}</td>
-                                                    <td className="p-4 text-center font-bold">{s.theoryScore || 0}</td>
-                                                    <td className="p-4 text-center font-black text-blue-700">{s.totalScore || 0}</td>
-                                                    <td className="p-4 text-[10px] text-gray-400">{s.date?.seconds ? new Date(s.date.seconds * 1000).toLocaleString() : 'N/A'}</td>
-                                                    <td className="p-4 text-center">
-                                                        <button onClick={(e)=> {e.stopPropagation(); if(confirm("Settle?")) fb.deleteDoc(fb.doc(fb.db,"artifacts/my-project-a6208/scores",s.id))}} className="text-red-500 font-black text-[10px] uppercase">Settle</button>
+                                                    <td className="p-5 font-bold text-slate-500">{s.objScore || 0}</td>
+                                                    <td className="p-5 font-bold text-slate-500">{s.theoryScore || 0}</td>
+                                                    <td className="p-5"><span className="bg-blue-600 text-white px-3 py-1 rounded-full font-black text-xs">{s.totalScore || 0}</span></td>
+                                                    <td className="p-5 text-[10px] font-bold text-gray-400">{s.date?.seconds ? new Date(s.date.seconds * 1000).toLocaleTimeString() : '--:--'}</td>
+                                                    <td className="p-5 no-print">
+                                                        <button onClick={(e)=> {e.stopPropagation(); if(confirm("Permanently delete?")) fb.deleteDoc(fb.doc(fb.db,"artifacts/my-project-a6208/scores",s.id))}} className="text-red-400 hover:text-red-600 font-black text-[9px] uppercase tracking-tighter">Settle</button>
                                                     </td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
                                 </div>
-
-                                {selectedReview && (
-                                    <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-                                        <div className="bg-white w-full max-w-2xl rounded-2xl max-h-[80vh] overflow-y-auto p-6">
-                                            <div className="flex justify-between items-center mb-6">
-                                                <h3 className="text-xl font-black uppercase">{selectedReview.studentName}'s Answers</h3>
-                                                <button onClick={()=>setSelectedReview(null)} className="font-black text-red-500">CLOSE</button>
+                                {reviewData && (
+                                    <div className="fixed inset-0 bg-slate-900/90 flex items-center justify-center p-4 z-50 no-print">
+                                        <div className="bg-white w-full max-w-2xl rounded-3xl max-h-[80vh] overflow-y-auto p-8 shadow-2xl">
+                                            <div className="flex justify-between items-center mb-8 border-b pb-4">
+                                                <div>
+                                                    <h3 className="font-black text-2xl uppercase tracking-tighter text-slate-900">{reviewData.studentName}</h3>
+                                                    <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">{reviewData.studentId}</p>
+                                                </div>
+                                                <button onClick={()=>setReviewData(null)} className="bg-red-50 text-red-500 px-4 py-2 rounded-xl font-black text-xs uppercase">Close Review</button>
                                             </div>
-                                            <div className="space-y-4">
-                                                {selectedReview.theoryResponses ? Object.entries(selectedReview.theoryResponses).map(([qText, ans]) => (
-                                                    <div key={qText} className="bg-gray-50 p-4 rounded-xl border">
-                                                        <p className="text-xs font-black text-gray-400 uppercase mb-1 tracking-widest font-mono">Question</p>
-                                                        <p className="font-bold text-sm mb-3">{qText}</p>
-                                                        <p className="text-xs font-black text-blue-400 uppercase mb-1 tracking-widest font-mono">Student Typed</p>
-                                                        <p className="text-sm bg-white p-3 rounded border italic">"{ans}"</p>
+                                            <div className="space-y-6">
+                                                {reviewData.theoryResponses ? Object.entries(reviewData.theoryResponses).map(([q, a]) => (
+                                                    <div key={q} className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                                                        <p className="text-[10px] font-black text-gray-400 uppercase mb-2 tracking-widest">Question</p>
+                                                        <p className="font-bold text-sm mb-5 text-slate-700 leading-relaxed">{q}</p>
+                                                        <p className="text-[10px] font-black text-blue-500 uppercase mb-2 tracking-widest">Student Response</p>
+                                                        <p className="bg-white p-5 rounded-xl border italic text-sm text-slate-800 shadow-inner leading-relaxed whitespace-pre-wrap">"{a}"</p>
                                                     </div>
-                                                )) : <p className="text-center font-bold text-gray-400 italic py-10">No theory questions were answered.</p>}
+                                                )) : <p className="text-center py-10 font-black text-slate-300 uppercase tracking-widest">No theory responses found</p>}
                                             </div>
                                         </div>
                                     </div>
@@ -164,75 +176,80 @@
                         )}
 
                         {activeTab === 'dashboard' && (
-                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div className="bg-white p-6 rounded-2xl shadow border">
-                                    <p className="text-xs font-bold text-gray-400 uppercase">Portal Status</p>
-                                    <h3 className={`text-2xl font-black ${examLive?'text-green-500':'text-red-500'}`}>{examLive?'LIVE':'OFFLINE'}</h3>
-                                    <button onClick={async()=>await fb.setDoc(fb.doc(fb.db,"artifacts/my-project-a6208/settings/examControl"),{isLive:!examLive})} className="mt-4 w-full bg-slate-900 text-white py-2 rounded-lg font-bold text-xs uppercase">Toggle</button>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="bg-white p-8 rounded-3xl shadow-xl border">
+                                    <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Portal Control</h2>
+                                    <div className="flex justify-between items-center mb-6">
+                                        <span className={`text-3xl font-black tracking-tighter ${settings.isLive?'text-green-500':'text-red-500'}`}>{settings.isLive?'LIVE':'OFFLINE'}</span>
+                                        <button onClick={async()=>await fb.setDoc(fb.doc(fb.db,"artifacts/my-project-a6208/settings/examControl"),{...settings, isLive:!settings.isLive})} className="bg-slate-900 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest">Toggle</button>
+                                    </div>
+                                    <div className="border-t pt-6">
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Timer (Minutes)</p>
+                                        <div className="flex gap-4">
+                                            <input type="number" className="p-3 border rounded-xl font-black w-24 text-center" value={settings.duration} onChange={e=>setSettings({...settings, duration: parseInt(e.target.value)})} />
+                                            <button onClick={async()=>await fb.setDoc(fb.doc(fb.db,"artifacts/my-project-a6208/settings/examControl"), settings)} className="bg-blue-600 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase flex-1 tracking-widest">Save Time</button>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="bg-white p-6 rounded-2xl shadow border">
-                                    <p className="text-xs font-bold text-gray-400 uppercase">Total Questions</p>
-                                    <h3 className="text-2xl font-black">{questions.length}</h3>
+                                <div className="bg-white p-8 rounded-3xl shadow-xl border flex flex-col justify-center text-center">
+                                    <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Current Question Bank</p>
+                                    <h3 className="text-7xl font-black text-slate-900 tracking-tighter">{questions.length}</h3>
                                 </div>
                             </div>
                         )}
 
                         {activeTab === 'questions' && (
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                                <section className="bg-white p-6 rounded-2xl shadow border h-fit">
-                                    <h2 className="text-xl font-black mb-4 uppercase">Create Question</h2>
-                                    <select className="w-full p-2 border rounded font-bold mb-4 bg-blue-50" value={newQ.type} onChange={e=>setNewQ({...newQ, type: e.target.value})}>
-                                        <option value="obj">Section A: OBJ</option>
-                                        <option value="theory">Section B: Theory</option>
-                                    </select>
-                                    <textarea className="w-full p-4 border rounded-xl mb-4 bg-gray-50 text-sm" placeholder="Question Text..." value={newQ.text} onChange={e=>setNewQ({...newQ, text:e.target.value})} />
+                                <section className="bg-white p-8 rounded-3xl shadow-xl border h-fit sticky top-10">
+                                    <h2 className="text-2xl font-black mb-6 uppercase tracking-tighter">Add Question</h2>
+                                    <div className="flex gap-2 mb-4">
+                                        {['obj', 'theory'].map(t => (
+                                            <button key={t} onClick={()=>setNewQ({...newQ, type:t})} className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition ${newQ.type===t?'bg-slate-900 text-white':'bg-gray-100 text-gray-400'}`}>{t === 'obj' ? 'OBJ' : 'Theory'}</button>
+                                        ))}
+                                    </div>
+                                    <textarea className="w-full p-5 border-2 rounded-2xl mb-4 bg-slate-50 text-sm h-32 outline-none focus:border-blue-400 font-medium" placeholder="Enter Question Content..." value={newQ.text} onChange={e=>setNewQ({...newQ, text:e.target.value})} />
                                     
                                     {newQ.type === 'obj' ? (
-                                        <div className="grid grid-cols-2 gap-2 mb-4">
-                                            {newQ.options.map((o,i)=>(<input key={i} className="p-2 border rounded text-xs" placeholder={`Option ${optionLetters[i]}`} value={o} onChange={e=>{let c=[...newQ.options];c[i]=e.target.value;setNewQ({...newQ,options:c})}} />))}
-                                            <select className="col-span-2 p-2 border rounded font-bold text-xs" value={newQ.correct} onChange={e=>setNewQ({...newQ,correct:e.target.value})}>
-                                                {optionLetters.map((l,i)=><option key={i} value={i}>Correct: {l}</option>)}
+                                        <div className="grid grid-cols-2 gap-3 mb-4">
+                                            {newQ.options.map((o,i)=>(<input key={i} className="p-3 border rounded-xl text-xs font-bold" placeholder={`Option ${String.fromCharCode(65+i)}`} value={o} onChange={e=>{let c=[...newQ.options];c[i]=e.target.value;setNewQ({...newQ,options:c})}} />))}
+                                            <select className="col-span-2 p-3 border rounded-xl font-black text-xs bg-slate-100" value={newQ.correct} onChange={e=>setNewQ({...newQ,correct:parseInt(e.target.value)})}>
+                                                {[0,1,2,3].map(i=><option key={i} value={i}>Correct: {String.fromCharCode(65+i)}</option>)}
                                             </select>
                                         </div>
                                     ) : (
-                                        <div className="mb-4 space-y-2">
-                                            <input className="w-full p-2 border rounded text-xs" placeholder="Keywords (comma separated)" value={newQ.keywords} onChange={e=>setNewQ({...newQ, keywords: e.target.value})} />
-                                            <input type="number" className="w-full p-2 border rounded text-xs" placeholder="Marks" value={newQ.points} onChange={e=>setNewQ({...newQ, points: parseInt(e.target.value)})} />
+                                        <div className="mb-4 space-y-3">
+                                            <input className="w-full p-3 border rounded-xl text-xs font-bold" placeholder="Keywords (e.g. soil, clay, pottery)" value={newQ.keywords} onChange={e=>setNewQ({...newQ, keywords: e.target.value})} />
+                                            <input type="number" className="w-full p-3 border rounded-xl text-xs font-bold" placeholder="Question Marks" value={newQ.points} onChange={e=>setNewQ({...newQ, points: parseInt(e.target.value)})} />
                                         </div>
                                     )}
 
-                                    <select className="w-full p-2 border rounded font-bold mb-4" value={newQ.className} onChange={e=>setNewQ({...newQ, className: e.target.value})}>
+                                    <select className="w-full p-4 border rounded-xl font-black mb-6 text-xs uppercase bg-blue-50 tracking-widest" value={newQ.className} onChange={e=>setNewQ({...newQ, className: e.target.value})}>
                                         {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
                                     </select>
                                     
                                     <button onClick={async()=>{
                                         if(!newQ.text) return;
                                         await fb.addDoc(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), {
-                                            questionText: newQ.text, 
-                                            options: newQ.type === 'obj' ? newQ.options : [], 
-                                            correctOptionIndex: newQ.type === 'obj' ? parseInt(newQ.correct) : null,
-                                            className: newQ.className,
-                                            type: newQ.type,
-                                            keywords: newQ.type === 'theory' ? newQ.keywords.split(',').map(k => k.trim().toLowerCase()) : [],
-                                            points: newQ.points
+                                            questionText: newQ.text, options: newQ.type==='obj'?newQ.options:[], 
+                                            correctOptionIndex: newQ.type==='obj'?newQ.correct:null, className: newQ.className,
+                                            type: newQ.type, keywords: newQ.type==='theory'?newQ.keywords.split(',').map(k=>k.trim().toLowerCase()):[], points: newQ.points
                                         });
-                                        setNewQ({ ...newQ, text: '', options: ['', '', '', ''], keywords: '', points: 2 });
-                                        alert("Added!");
-                                    }} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold uppercase shadow-lg">Save</button>
+                                        setNewQ({ ...newQ, text: '', options: ['', '', '', ''], keywords: '', points: 5 });
+                                    }} className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-blue-200">Save to Bank</button>
                                 </section>
 
-                                <section className="space-y-2">
-                                    <h2 className="font-black text-gray-400 text-[10px] uppercase mb-4 tracking-widest">Question Bank (Manage All)</h2>
-                                    {questions.sort((a,b) => (a.className > b.className) ? 1 : -1).map((q)=>(
-                                        <div key={q.id} className="bg-white p-4 rounded-xl border flex justify-between items-center shadow-sm">
+                                <div className="space-y-3">
+                                    <h2 className="font-black text-gray-400 text-[10px] uppercase tracking-[0.3em] mb-4">Live Bank</h2>
+                                    {questions.sort((a,b)=>a.className > b.className ? 1 : -1).map((q)=>(
+                                        <div key={q.id} className="bg-white p-5 rounded-2xl border flex justify-between items-center shadow-sm hover:border-blue-300 transition">
                                             <div className="pr-4">
-                                                <span className="text-[8px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase">{q.className} | {q.type}</span>
-                                                <p className="font-bold text-xs mt-1 text-slate-700">{q.questionText}</p>
+                                                <span className="text-[8px] font-black text-blue-500 bg-blue-50 px-2 py-1 rounded uppercase tracking-tighter">{q.className} | {q.type || 'obj'}</span>
+                                                <p className="font-bold text-xs mt-2 text-slate-700 leading-tight">{q.questionText}</p>
                                             </div>
-                                            <button onClick={async()=> {if(confirm("Delete Question?")) await fb.deleteDoc(fb.doc(fb.db,"artifacts/my-project-a6208/public/data/questions",q.id))}} className="text-red-400 font-black text-[10px] uppercase">Del</button>
+                                            <button onClick={async()=> {if(confirm("Del?")) await fb.deleteDoc(fb.doc(fb.db,"artifacts/my-project-a6208/public/data/questions",q.id))}} className="text-red-400 font-black text-[9px] uppercase tracking-tighter p-2">Delete</button>
                                         </div>
                                     ))}
-                                </section>
+                                </div>
                             </div>
                         )}
                     </main>
@@ -241,132 +258,142 @@
         };
 
         const StudentExamPage = () => {
-            const [isLive, setIsLive] = React.useState(null);
+            const [settings, setSettings] = React.useState({ isLive: null, duration: 40 });
             const [msId, setMsId] = React.useState('');
             const [student, setStudent] = React.useState(null);
             const [questions, setQuestions] = React.useState([]);
             const [index, setIndex] = React.useState(0);
             const [answers, setAnswers] = React.useState({});
+            const [timeLeft, setTimeLeft] = React.useState(0);
             const [loading, setLoading] = React.useState(false);
             const [finished, setFinished] = React.useState(false);
-            const [total, setTotal] = React.useState(0);
-            const [checked, setChecked] = React.useState(false);
+            const [finalScore, setFinalScore] = React.useState(0);
 
             React.useEffect(() => {
-                fb.onSnapshot(fb.doc(fb.db, "artifacts/my-project-a6208/settings/examControl"), (doc) => setIsLive(doc.exists() ? doc.data().isLive : false));
+                fb.onSnapshot(fb.doc(fb.db, "artifacts/my-project-a6208/settings/examControl"), (doc) => {
+                    if (doc.exists()) {
+                        const data = doc.data();
+                        setSettings(data);
+                        if (timeLeft === 0 && !student) setTimeLeft(data.duration * 60);
+                    }
+                });
             }, []);
 
-            const verifyId = async () => {
-                setLoading(true); setChecked(false);
+            React.useEffect(() => {
+                if (student && timeLeft > 0 && !finished) {
+                    const t = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
+                    return () => clearInterval(t);
+                } else if (timeLeft === 0 && student && !finished) {
+                    submit();
+                }
+            }, [timeLeft, student, finished]);
+
+            const verify = async () => {
+                setLoading(true);
                 const inputId = msId.toUpperCase().trim();
                 try {
                     const { data } = await _supabase.from('students').select('*').eq('status', 'Enrolled');
                     const found = data?.find(s => ("MS-" + s.id.substring(0, 5).toUpperCase()) === inputId);
-                    
                     if (found) {
                         const scoreSnap = await fb.getDocs(fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), fb.where("studentId", "==", inputId)));
-                        if (!scoreSnap.empty) { alert("Already Submitted."); setLoading(false); return; }
-                        
+                        if (!scoreSnap.empty) { alert("Exam Already Submitted."); setLoading(false); return; }
                         const rawClass = found.grade_level || found.class || 'SSS 1';
                         setStudent({ name: found.full_name, id: inputId, className: rawClass });
-                        
                         const snap = await fb.getDocs(fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), fb.where("className", "==", rawClass)));
-                        // SORTING: OBJ first, then Theory
-                        const sorted = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => (a.type === 'theory' ? 1 : -1));
-                        setQuestions(sorted);
-                        setChecked(true);
-                    } else alert("Invalid ID.");
-                } catch (e) { alert("Error: " + e.message); }
+                        setQuestions(snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => a.type === 'theory' ? 1 : -1));
+                    } else alert("Invalid Student ID.");
+                } catch (e) { alert("System Error."); }
                 setLoading(false);
             };
 
-            const finish = async () => {
-                if (!confirm("Submit Exam?")) return;
-                let objScore = 0; let thyScore = 0;
+            const submit = async () => {
+                let obj = 0; let thy = 0;
                 let theoryResponses = {};
-                
                 questions.forEach((q, i) => {
                     const ans = answers[i];
                     if (!ans) return;
                     if (q.type === 'obj' || !q.type) {
-                        if (ans === q.correctOptionIndex) objScore += 2;
+                        if (ans === q.correctOptionIndex) obj += 2;
                     } else {
                         theoryResponses[q.questionText] = ans;
                         const hits = q.keywords.filter(w => ans.toLowerCase().includes(w)).length;
-                        if (hits >= Math.ceil(q.keywords.length * 0.5)) thyScore += (q.points || 2);
+                        if (hits >= Math.ceil(q.keywords.length * 0.5)) thy += (q.points || 5);
                     }
                 });
-                
-                const final = objScore + thyScore;
-                setTotal(final);
+                const total = obj + thy;
+                setFinalScore(total);
                 await fb.addDoc(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), {
                     studentName: student.name, studentId: student.id, className: student.className,
-                    objScore, theoryScore: thyScore, totalScore: final, date: new Date(), theoryResponses
+                    objScore: obj, theoryScore: thy, totalScore: total, date: new Date(), theoryResponses
                 });
                 setFinished(true);
             };
 
-            if (isLive === false) return <div className="h-screen flex items-center justify-center bg-slate-900 text-white font-black">PORTAL CLOSED</div>;
+            if (settings.isLive === false) return <div className="h-screen flex items-center justify-center bg-slate-900 text-white font-black uppercase tracking-[0.5em]">Portal Offline</div>;
+            
             if (finished) return (
-                <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center">
-                    <div className="bg-white p-10 rounded-3xl shadow-2xl border w-full max-w-md">
-                        <h1 className="text-2xl font-black mb-1 uppercase tracking-tighter">Success!</h1>
-                        <div className="bg-blue-50 p-6 rounded-2xl mb-6"><h2 className="text-6xl font-black text-blue-600">{total}</h2></div>
-                        <button onClick={() => window.location.reload()} className="w-full bg-black text-white py-4 rounded-xl font-black uppercase text-xs">EXIT</button>
-                    </div>
+                <div className="flex flex-col items-center justify-center min-h-screen bg-white p-6 text-center">
+                    <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-16 mb-8" />
+                    <h1 className="text-xl font-black uppercase tracking-widest text-slate-400">Submission Successful</h1>
+                    <div className="my-10"><span className="text-9xl font-black text-blue-600 tracking-tighter">{finalScore}</span></div>
+                    <button onClick={() => window.location.reload()} className="bg-slate-900 text-white px-12 py-4 rounded-2xl font-black uppercase text-xs tracking-widest">Logout</button>
                 </div>
             );
 
             if (!student) return (
-                <div className="flex items-center justify-center min-h-screen p-4 bg-slate-50">
-                    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm border text-center">
-                        <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-16 mx-auto mb-6" />
-                        <h2 className="text-2xl font-black mb-6 uppercase tracking-tighter">Login</h2>
-                        <input className="w-full p-4 border rounded-xl mb-4 uppercase text-center font-bold bg-gray-50" placeholder="MS-XXXXX" onChange={e => setMsId(e.target.value)} />
-                        <button onClick={verifyId} className="w-full py-4 bg-blue-600 text-white rounded-xl font-black uppercase">{loading ? "Wait..." : "Enter"}</button>
+                <div className="flex items-center justify-center min-h-screen bg-slate-50 p-4">
+                    <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl w-full max-w-sm border text-center">
+                        <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-20 mx-auto mb-8" />
+                        <h2 className="text-3xl font-black mb-8 uppercase tracking-tighter">Student Portal</h2>
+                        <input className="w-full p-5 border-2 rounded-2xl mb-4 uppercase text-center font-black bg-slate-50 text-blue-600 outline-none focus:border-blue-400" placeholder="MS-XXXXX" onChange={e => setMsId(e.target.value)} />
+                        <button onClick={verify} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-blue-100">{loading ? "Validating..." : "Start Assessment"}</button>
                     </div>
-                </div>
-            );
-
-            if (checked && questions.length === 0) return (
-                <div className="h-screen flex flex-col items-center justify-center text-center p-6">
-                    <h2 className="text-2xl font-black text-slate-800 uppercase mb-2">No Questions Found</h2>
-                    <p className="text-gray-400 font-bold mb-8 uppercase text-xs">No questions have been set for {student.className} yet.</p>
-                    <button onClick={()=>window.location.reload()} className="bg-slate-900 text-white px-10 py-3 rounded-full font-black text-xs uppercase">Go Back</button>
                 </div>
             );
 
             const q = questions[index];
-            if (!q) return <div className="p-20 text-center font-black animate-pulse">LOADING...</div>;
+            const formatTime = (s) => `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
 
             return (
-                <div className="max-w-2xl mx-auto p-4 md:p-10 pt-12">
-                    <div className="flex justify-between items-center mb-10">
-                        <div><p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{student.className}</p><h2 className="text-xl font-black uppercase tracking-tighter">{student.name}</h2></div>
-                        <div className="bg-slate-900 text-white px-4 py-1 rounded-full font-black text-xs">{index + 1} / {questions.length}</div>
-                    </div>
-                    <div className="bg-white p-8 rounded-2xl shadow-sm border">
-                        <p className="text-xs font-black text-blue-500 uppercase mb-4 tracking-widest">{q.type === 'theory' ? 'Section B: Theory' : 'Section A: OBJ'}</p>
-                        <p className="text-lg font-bold mb-10 text-slate-800 leading-relaxed">{q.questionText}</p>
-                        {q.type === 'theory' ? (
-                            <textarea className="w-full p-4 border rounded-xl h-44 bg-gray-50 focus:border-blue-500 outline-none text-sm font-medium" placeholder="Type your detailed answer here..." value={answers[index] || ''} onChange={e=>setAnswers({...answers, [index]: e.target.value})} />
-                        ) : (
-                            <div className="space-y-3">
-                                {q.options.map((opt, i) => (
-                                    <button key={i} onClick={() => setAnswers({...answers, [index]: i})} className={`w-full p-5 text-left rounded-xl border-2 transition font-bold text-sm ${answers[index] === i ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white border-gray-100 hover:border-blue-200'}`}>
-                                        <span className="mr-3 opacity-40">{optionLetters[i]}.</span> {opt}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                        <div className="mt-12 flex justify-between items-center">
-                            <button onClick={() => setIndex(i => i - 1)} disabled={index === 0} className="text-gray-400 font-black disabled:opacity-0 uppercase text-[10px] tracking-widest">Back</button>
-                            {index === questions.length - 1 ? 
-                                <button onClick={finish} className="bg-green-600 text-white px-12 py-3 rounded-xl font-black uppercase text-xs shadow-xl">Final Submit</button> : 
-                                <button onClick={() => setIndex(i => i + 1)} className="bg-blue-600 text-white px-12 py-3 rounded-xl font-black uppercase text-xs shadow-xl">Next</button>
-                            }
+                <div className="max-w-3xl mx-auto p-4 md:p-10 pt-12">
+                    <div className="flex justify-between items-end mb-10 border-b pb-6">
+                        <div>
+                            <p className="text-[10px] text-blue-500 font-black uppercase tracking-[0.2em] mb-1">{student.className}</p>
+                            <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-900">{student.name}</h2>
+                        </div>
+                        <div className={`text-center px-6 py-2 rounded-2xl border-2 font-black ${timeLeft < 300 ? 'border-red-500 text-red-500 animate-pulse' : 'border-slate-900 text-slate-900'}`}>
+                            <p className="text-[8px] uppercase tracking-widest">Time Remaining</p>
+                            <p className="text-xl">{formatTime(timeLeft)}</p>
                         </div>
                     </div>
+
+                    {questions.length > 0 ? (
+                        <div className="bg-white p-10 rounded-[2.5rem] shadow-xl border border-slate-100 min-h-[450px] relative">
+                            <p className="text-[10px] font-black text-blue-600 uppercase mb-4 tracking-[0.2em]">{q.type === 'theory' ? 'Section B: Theory Writing' : 'Section A: Multiple Choice'}</p>
+                            <p className="text-xl font-bold mb-12 text-slate-800 leading-snug">{q.questionText}</p>
+                            {q.type === 'theory' ? (
+                                <textarea className="w-full p-6 border-2 rounded-2xl h-56 bg-slate-50 focus:border-blue-400 outline-none text-sm font-medium leading-relaxed" placeholder="Write your full response here..." value={answers[index] || ''} onChange={e=>setAnswers({...answers, [index]: e.target.value})} />
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {q.options.map((opt, i) => (
+                                        <button key={i} onClick={() => setAnswers({...answers, [index]: i})} className={`p-6 text-left rounded-2xl border-2 transition font-black text-xs uppercase tracking-tight ${answers[index] === i ? 'bg-blue-600 text-white border-blue-600 shadow-xl' : 'bg-white border-slate-100 hover:border-blue-200 text-slate-500'}`}>
+                                            <span className="mr-3 opacity-30">{String.fromCharCode(65+i)}.</span> {opt}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            <div className="mt-16 flex justify-between items-center">
+                                <button onClick={() => setIndex(i => i - 1)} disabled={index === 0} className="text-slate-300 font-black disabled:opacity-0 uppercase text-[10px] tracking-widest">Previous</button>
+                                <div className="text-[10px] font-black text-slate-300 tracking-[0.3em] uppercase">{index + 1} / {questions.length}</div>
+                                {index === questions.length - 1 ? 
+                                    <button onClick={() => confirm("Ready to end exam?") && submit()} className="bg-green-600 text-white px-12 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-green-100">Finish</button> : 
+                                    <button onClick={() => setIndex(i => i + 1)} className="bg-blue-600 text-white px-12 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-blue-100">Next</button>
+                                }
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="text-center py-20 font-black text-slate-300 uppercase tracking-widest">Questions Loading...</div>
+                    )}
                 </div>
             );
         };
@@ -375,18 +402,18 @@
             const [page, setPage] = React.useState('home');
             const [ready, setReady] = React.useState(false);
             React.useEffect(() => { const i = setInterval(() => { if(window.fb) { setReady(true); clearInterval(i); }}, 100); }, []);
-            if (!ready) return <div className="p-20 text-center font-black text-blue-600 uppercase animate-pulse">Connecting Portal...</div>;
+            if (!ready) return <div className="h-screen flex items-center justify-center font-black text-blue-600 uppercase tracking-[0.5em] animate-pulse">Syncing Database...</div>;
 
             return (
                 <AppContext.Provider value={{ setPage }}>
                     {page === 'home' && (
                         <div className="flex flex-col items-center justify-center min-h-screen text-center p-6 bg-slate-50">
-                            <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-24 mb-6" />
-                            <h1 className="text-5xl font-black mb-2 uppercase tracking-tighter">Mustard Seed</h1>
-                            <p className="text-gray-400 font-bold text-[10px] tracking-widest uppercase mb-12">Theory & OBJ Integrated System</p>
-                            <div className="flex flex-col sm:flex-row gap-4">
-                                <button onClick={() => setPage('exam')} className="bg-blue-600 text-white px-14 py-4 rounded-full font-black shadow-2xl">START EXAM</button>
-                                <button onClick={() => setPage('admin')} className="bg-white text-gray-500 px-14 py-4 rounded-full font-bold border hover:bg-gray-50">ADMIN PANEL</button>
+                            <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-28 mb-8" />
+                            <h1 className="text-6xl font-black mb-2 uppercase tracking-tighter text-slate-900">MUSTARD SEED</h1>
+                            <p className="text-slate-400 font-black text-[10px] tracking-[0.4em] uppercase mb-16">Advanced Computer Based Assessment</p>
+                            <div className="flex flex-col sm:flex-row gap-6">
+                                <button onClick={() => setPage('exam')} className="bg-blue-600 text-white px-16 py-5 rounded-[2rem] font-black uppercase tracking-widest shadow-2xl shadow-blue-200 hover:scale-105 transition">Start Assessment</button>
+                                <button onClick={() => setPage('admin')} className="bg-white text-slate-400 px-16 py-5 rounded-[2rem] font-black uppercase tracking-widest border border-slate-200 hover:bg-slate-50 transition">Administration</button>
                             </div>
                         </div>
                     )}

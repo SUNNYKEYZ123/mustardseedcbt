@@ -4,7 +4,7 @@
     <link rel="icon" type="image/x-icon" href="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mustard Seed CBT - Complete Panel</title>
+    <title>Mustard Seed CBT - Theory & OBJ</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -17,7 +17,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, onSnapshot, query, where, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, onSnapshot, query, where, setDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDOO3uHmzOuAxJcdLxu-OImzlH12A6FpeY",
@@ -32,33 +32,38 @@
         window.fb = {
             db: getFirestore(app),
             auth: getAuth(app),
-            collection, addDoc, getDocs, doc, deleteDoc, onSnapshot, query, where, signInAnonymously, onAuthStateChanged, setDoc, updateDoc
+            collection, addDoc, getDocs, doc, deleteDoc, onSnapshot, query, where, signInAnonymously, onAuthStateChanged, setDoc, writeBatch
         };
     </script>
 
     <script type="text/babel">
         const { createClient } = window.supabase;
         const SB_URL = 'https://jqrcoqslmylmubxwfgyt.supabase.co';
-        const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxcmNvcXNsbXlsmXVieHdmZ3l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2ODc2NzgsImV4cCI6MjA4MDI2MzY3OH0.4bXOY35R3eGYZjPxtuJzvwifPEfHXr5UEdzFbB-caKU';
+        const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxcmNvcXNsbXlsbXVieHdmZ3l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2ODc2NzgsImV4cCI6MjA4MDI2MzY3OH0.4bXOY35R3eGYZjPxtuJzvwifPEfHXr5UEdzFbB-caKU';
         const _supabase = createClient(SB_URL, SB_KEY);
 
         const AppContext = React.createContext(null);
         const ADMIN_PASSWORD = 'SUNNYKEYZ2025@';
-        const CLASSES = ['SSS 1', 'SSS 2', 'SSS 3'];
+        const optionLetters = ['A', 'B', 'C', 'D'];
+        const CLASSES = ['SSS 1', 'SSS 2', 'SSS 3', 'JSS 1', 'JSS 2', 'JSS 3'];
 
         const AdminPage = () => {
+            const { setPage } = React.useContext(AppContext);
             const [auth, setAuth] = React.useState(false);
             const [pass, setPass] = React.useState('');
             const [activeTab, setActiveTab] = React.useState('dashboard'); 
             const [scores, setScores] = React.useState([]);
             const [questions, setQuestions] = React.useState([]);
             const [examLive, setExamLive] = React.useState(false);
-            const [newQ, setNewQ] = React.useState({ text: '', options: ['', '', '', ''], correct: 0, className: 'SSS 1', type: 'OBJ', keywords: '', pointsPerKey: 2 });
+            const [resFilter, setResFilter] = React.useState('ALL');
+            
+            // State for creating questions
+            const [newQ, setNewQ] = React.useState({ text: '', options: ['', '', '', ''], correct: 0, className: 'SSS 1', type: 'obj', keywords: '', points: 1 });
 
             React.useEffect(() => {
                 if (!auth) return;
                 fb.onSnapshot(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), (s) => {
-                    setScores(s.docs.map(d => ({id: d.id, ...d.data()})));
+                    setScores(s.docs.map(d => ({id: d.id, ...d.data()})).sort((a, b) => (b.date?.seconds || 0) - (a.date?.seconds || 0)));
                 });
                 fb.onSnapshot(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), (s) => {
                     setQuestions(s.docs.map(d => ({id: d.id, ...d.data()})));
@@ -67,14 +72,6 @@
                     if (doc.exists()) setExamLive(doc.data().isLive);
                 });
             }, [auth]);
-
-            const updateTheoryMark = async (sid, qidx, val) => {
-                const docRef = fb.doc(fb.db, "artifacts/my-project-a6208/scores", sid);
-                const current = scores.find(s => s.id === sid);
-                const updatedMarks = { ...(current.theoryMarks || {}), [qidx]: Number(val) };
-                const totalB = Object.values(updatedMarks).reduce((a, b) => a + b, 0);
-                await fb.updateDoc(docRef, { theoryMarks: updatedMarks, theoryScore: totalB });
-            };
 
             if (!auth) return (
                 <div className="flex items-center justify-center min-h-screen bg-gray-100">
@@ -90,121 +87,123 @@
             return (
                 <div className="flex min-h-screen bg-gray-50">
                     <aside className="w-64 bg-slate-900 text-white p-6 fixed h-full">
-                        <h1 className="text-xl font-black mb-10 text-blue-400">ADMIN PANEL</h1>
+                        <h1 className="text-xl font-black mb-10 text-blue-400 uppercase">Mustard Admin</h1>
                         <nav className="space-y-2">
-                            <button onClick={()=>setActiveTab('dashboard')} className={`w-full text-left p-3 rounded-lg font-bold text-xs ${activeTab==='dashboard'?'bg-blue-600':'text-gray-400'}`}>DASHBOARD</button>
-                            <button onClick={()=>setActiveTab('questions')} className={`w-full text-left p-3 rounded-lg font-bold text-xs ${activeTab==='questions'?'bg-blue-600':'text-gray-400'}`}>QUESTIONS</button>
-                            <button onClick={()=>setActiveTab('review')} className={`w-full text-left p-3 rounded-lg font-bold text-xs ${activeTab==='review'?'bg-blue-600':'text-gray-400'}`}>THEORY MARKING</button>
-                            <button onClick={()=>setActiveTab('results')} className={`w-full text-left p-3 rounded-lg font-bold text-xs ${activeTab==='results'?'bg-blue-600':'text-gray-400'}`}>RESULTS</button>
+                            <button onClick={()=>setActiveTab('dashboard')} className={`w-full text-left p-3 rounded-lg font-bold text-xs uppercase ${activeTab==='dashboard'?'bg-blue-600':'text-gray-400'}`}>Dashboard</button>
+                            <button onClick={()=>setActiveTab('obj-questions')} className={`w-full text-left p-3 rounded-lg font-bold text-xs uppercase ${activeTab==='obj-questions'?'bg-blue-600':'text-gray-400'}`}>OBJ Question Bank</button>
+                            <button onClick={()=>setActiveTab('theory-questions')} className={`w-full text-left p-3 rounded-lg font-bold text-xs uppercase ${activeTab==='theory-questions'?'bg-blue-600':'text-gray-400'}`}>Theory Questions</button>
+                            <button onClick={()=>setActiveTab('results')} className={`w-full text-left p-3 rounded-lg font-bold text-xs uppercase ${activeTab==='results'?'bg-blue-600':'text-gray-400'}`}>Result Dashboard</button>
+                            <button onClick={()=>setPage('home')} className="w-full text-left p-3 rounded-lg font-bold text-xs uppercase text-red-400 mt-10">Logout</button>
                         </nav>
                     </aside>
 
-                    <main className="ml-64 flex-1 p-10">
+                    <main className="flex-1 ml-64 p-10">
                         {activeTab === 'results' && (
-                            <div className="bg-white rounded-xl shadow border overflow-hidden">
-                                <table className="w-full text-left border-collapse">
-                                    <thead className="bg-gray-100 text-[10px] font-black uppercase text-gray-500">
-                                        <tr>
-                                            <th className="p-4 border">Name</th>
-                                            <th className="p-4 border">Class</th>
-                                            <th className="p-4 border">Sec A</th>
-                                            <th className="p-4 border">Sec B</th>
-                                            <th className="p-4 border bg-blue-50">Total</th>
-                                            <th className="p-4 border text-center">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="text-xs">
-                                        {scores.map(s=>(
-                                            <tr key={s.id} className="border-b">
-                                                <td className="p-4 font-bold uppercase">{s.studentName}</td>
-                                                <td className="p-4">{s.className}</td>
-                                                <td className="p-4">{s.correctAnswers * 2}</td>
-                                                <td className="p-4 text-purple-600 font-bold">{s.theoryScore || 0}</td>
-                                                <td className="p-4 font-black text-blue-700">{(s.correctAnswers * 2) + (s.theoryScore || 0)}</td>
-                                                <td className="p-4 text-center">
-                                                    <button onClick={async()=> {if(confirm("Delete?")) await fb.deleteDoc(fb.doc(fb.db,"artifacts/my-project-a6208/scores",s.id))}} className="text-red-500 font-black">DELETE</button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-
-                        {activeTab === 'review' && (
-                            <div className="space-y-4">
-                                {scores.map(s => (
-                                    <div key={s.id} className="bg-white p-4 rounded-xl border shadow-sm">
-                                        <h3 className="font-black uppercase text-blue-600 border-b pb-2 mb-4">{s.studentName}</h3>
-                                        {Object.entries(s.theoryAnswers || {}).map(([idx, ans]) => (
-                                            <div key={idx} className="flex gap-4 mb-4 items-start">
-                                                <div className="flex-1 bg-gray-50 p-3 rounded border">
-                                                    <p className="text-[10px] font-bold text-gray-400 uppercase">Answer:</p>
-                                                    <p className="text-sm italic">"{ans}"</p>
-                                                </div>
-                                                <div className="w-24 text-center">
-                                                    <p className="text-[9px] font-bold mb-1">MARK</p>
-                                                    <input type="number" className="w-full p-2 border rounded font-black text-center" value={s.theoryMarks?.[idx] ?? ''} onChange={(e)=>updateTheoryMark(s.id, idx, e.target.value)} />
-                                                </div>
-                                            </div>
-                                        ))}
+                            <div className="space-y-6">
+                                <div className="flex justify-between items-center">
+                                    <h2 className="text-2xl font-black">Student Result Records</h2>
+                                    <div className="flex gap-4">
+                                        <select value={resFilter} onChange={e=>setResFilter(e.target.value)} className="p-2 border rounded-lg font-bold text-sm bg-white">
+                                            <option value="ALL">All Classes</option>
+                                            {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                        <button onClick={async() => {if(confirm("Wipe all data?")) { const b = fb.writeBatch(fb.db); scores.forEach(s => b.delete(fb.doc(fb.db, "artifacts/my-project-a6208/scores", s.id))); await b.commit(); }}} className="bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase">Clear All</button>
                                     </div>
-                                ))}
+                                </div>
+                                <div className="bg-white rounded-2xl shadow-xl border overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-gray-100 border-b text-[10px] font-black uppercase text-gray-500">
+                                            <tr>
+                                                <th className="p-4">Student ID</th>
+                                                <th className="p-4">Name</th>
+                                                <th className="p-4">Sec A (OBJ)</th>
+                                                <th className="p-4">Sec B (THY)</th>
+                                                <th className="p-4">Total</th>
+                                                <th className="p-4">Time</th>
+                                                <th className="p-4">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="text-sm">
+                                            {scores.filter(s=>resFilter==='ALL'||s.className===resFilter).map(s=>(
+                                                <tr key={s.id} className="border-b">
+                                                    <td className="p-4 font-mono font-bold text-blue-600">{s.studentId}</td>
+                                                    <td className="p-4 font-black uppercase">{s.studentName}</td>
+                                                    <td className="p-4 font-bold">{s.objScore || 0}</td>
+                                                    <td className="p-4 font-bold">{s.theoryScore || 0}</td>
+                                                    <td className="p-4 font-black text-blue-700">{s.totalScore || (s.objScore + s.theoryScore)}</td>
+                                                    <td className="p-4 text-[10px] text-gray-400">{s.date?.seconds ? new Date(s.date.seconds * 1000).toLocaleString() : 'N/A'}</td>
+                                                    <td className="p-4"><button onClick={async()=>await fb.deleteDoc(fb.doc(fb.db,"artifacts/my-project-a6208/scores",s.id))} className="text-red-500 font-bold text-xs">DEL</button></td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         )}
 
                         {activeTab === 'dashboard' && (
-                            <div className="grid grid-cols-3 gap-6">
-                                <div className="bg-white p-6 rounded-xl border">
-                                    <p className="text-xs font-bold text-gray-400">EXAM LIVE</p>
-                                    <h3 className={`text-2xl font-black ${examLive?'text-green-500':'text-red-500'}`}>{examLive?'YES':'NO'}</h3>
-                                    <button onClick={async()=>await fb.setDoc(fb.doc(fb.db,"artifacts/my-project-a6208/settings/examControl"),{isLive:!examLive})} className="mt-4 bg-black text-white px-4 py-2 rounded text-[10px] font-bold">TOGGLE</button>
+                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="bg-white p-6 rounded-2xl shadow border">
+                                    <p className="text-xs font-bold text-gray-400 uppercase">Exam Mode</p>
+                                    <h3 className={`text-2xl font-black ${examLive?'text-green-500':'text-red-500'}`}>{examLive?'LIVE':'OFFLINE'}</h3>
+                                    <button onClick={async()=>await fb.setDoc(fb.doc(fb.doc(fb.db,"artifacts/my-project-a6208/settings/examControl"),{isLive:!examLive}))} className="mt-4 w-full bg-slate-900 text-white py-2 rounded-lg font-bold text-xs uppercase">Toggle Status</button>
                                 </div>
-                                <div className="bg-white p-6 rounded-xl border"><p className="text-xs font-bold text-gray-400">QUESTIONS</p><h3 className="text-2xl font-black">{questions.length}</h3></div>
-                                <div className="bg-white p-6 rounded-xl border"><p className="text-xs font-bold text-gray-400">SCRIPTS</p><h3 className="text-2xl font-black text-blue-600">{scores.length}</h3></div>
+                                <div className="bg-white p-6 rounded-2xl shadow border"><p className="text-xs font-bold text-gray-400 uppercase">Total Questions</p><h3 className="text-2xl font-black">{questions.length}</h3></div>
+                                <div className="bg-white p-6 rounded-2xl shadow border"><p className="text-xs font-bold text-gray-400 uppercase">Results Logged</p><h3 className="text-2xl font-black text-blue-600">{scores.length}</h3></div>
                             </div>
                         )}
 
-                        {activeTab === 'questions' && (
-                            <div className="grid grid-cols-2 gap-10">
-                                <section className="bg-white p-6 rounded-xl border h-fit">
-                                    <div className="flex gap-2 mb-4">
-                                        <button onClick={()=>setNewQ({...newQ, type:'OBJ'})} className={`flex-1 py-2 rounded font-black text-[10px] ${newQ.type==='OBJ'?'bg-blue-600 text-white':'bg-gray-100'}`}>SECTION A</button>
-                                        <button onClick={()=>setNewQ({...newQ, type:'THEORY'})} className={`flex-1 py-2 rounded font-black text-[10px] ${newQ.type==='THEORY'?'bg-purple-600 text-white':'bg-gray-100'}`}>SECTION B</button>
-                                    </div>
-                                    <textarea className="w-full p-3 border rounded mb-4 text-sm" placeholder="Question Text" value={newQ.text} onChange={e=>setNewQ({...newQ, text:e.target.value})} />
-                                    {newQ.type === 'THEORY' ? (
-                                        <div className="bg-purple-50 p-3 rounded mb-4">
-                                            <input className="w-full p-2 border rounded mb-2 text-xs" placeholder="Keywords (e.g. data, science)" value={newQ.keywords} onChange={e=>setNewQ({...newQ, keywords: e.target.value})} />
-                                            <input type="number" className="w-full p-2 border rounded text-xs" placeholder="Marks per keyword" value={newQ.pointsPerKey} onChange={e=>setNewQ({...newQ, pointsPerKey: e.target.value})} />
-                                        </div>
-                                    ) : (
+                        {(activeTab === 'obj-questions' || activeTab === 'theory-questions') && (
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                                <section className="bg-white p-6 rounded-2xl shadow border h-fit sticky top-10">
+                                    <h2 className="text-xl font-black mb-4 uppercase">New {activeTab === 'obj-questions' ? 'OBJ' : 'Theory'}</h2>
+                                    <textarea className="w-full p-4 border rounded-xl mb-4 bg-gray-50 text-sm" placeholder="Question text..." value={newQ.text} onChange={e=>setNewQ({...newQ, text:e.target.value})} />
+                                    
+                                    {activeTab === 'obj-questions' ? (
                                         <div className="grid grid-cols-2 gap-2 mb-4">
-                                            {newQ.options.map((o,i)=>(<input key={i} className="p-2 border rounded text-xs" placeholder={`Opt ${i+1}`} value={o} onChange={e=>{let c=[...newQ.options];c[i]=e.target.value;setNewQ({...newQ,options:c})}} />))}
-                                            <select className="col-span-2 p-2 border rounded text-xs font-bold" value={newQ.correct} onChange={e=>setNewQ({...newQ,correct:e.target.value})}>
-                                                {[0,1,2,3].map(i=><option key={i} value={i}>Correct: Option {i+1}</option>)}
+                                            {newQ.options.map((o,i)=>(<input key={i} className="p-2 border rounded text-sm" placeholder={`Option ${optionLetters[i]}`} value={o} onChange={e=>{let c=[...newQ.options];c[i]=e.target.value;setNewQ({...newQ,options:c})}} />))}
+                                            <select className="col-span-2 p-2 border rounded font-bold text-sm bg-blue-50" value={newQ.correct} onChange={e=>setNewQ({...newQ,correct:e.target.value})}>
+                                                {optionLetters.map((l,i)=><option key={i} value={i}>Answer: {l}</option>)}
                                             </select>
                                         </div>
+                                    ) : (
+                                        <div className="mb-4">
+                                            <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Keywords (separate with commas)</p>
+                                            <input className="w-full p-3 border rounded mb-2 text-sm" placeholder="e.g. clay, water, ceramic" value={newQ.keywords} onChange={e=>setNewQ({...newQ, keywords: e.target.value})} />
+                                            <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Marks per Question</p>
+                                            <input type="number" className="w-full p-2 border rounded text-sm" value={newQ.points} onChange={e=>setNewQ({...newQ, points: parseInt(e.target.value)})} />
+                                        </div>
                                     )}
-                                    <select className="w-full p-2 border rounded mb-4 text-xs font-bold" value={newQ.className} onChange={e=>setNewQ({...newQ, className: e.target.value})}>
+
+                                    <select className="w-full p-2 border rounded font-bold mb-4" value={newQ.className} onChange={e=>setNewQ({...newQ, className: e.target.value})}>
                                         {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
                                     </select>
+
                                     <button onClick={async()=>{
+                                        const type = activeTab === 'obj-questions' ? 'obj' : 'theory';
                                         await fb.addDoc(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), {
-                                            questionText: newQ.text, options: newQ.type==='OBJ'?newQ.options:[], 
-                                            correctOptionIndex: newQ.type==='OBJ'?parseInt(newQ.correct):null, 
-                                            className: newQ.className, type: newQ.type,
-                                            keywords: newQ.keywords, pointsPerKey: Number(newQ.pointsPerKey)
+                                            questionText: newQ.text, 
+                                            options: type === 'obj' ? newQ.options : [], 
+                                            correctOptionIndex: type === 'obj' ? parseInt(newQ.correct) : null,
+                                            keywords: type === 'theory' ? newQ.keywords.split(',').map(k => k.trim().toLowerCase()) : [],
+                                            points: newQ.points,
+                                            className: newQ.className,
+                                            type: type
                                         });
-                                        setNewQ({ ...newQ, text: '', keywords: '' });
-                                        alert("Saved!");
-                                    }} className="w-full bg-blue-600 text-white py-3 rounded font-black text-xs">SAVE QUESTION</button>
+                                        setNewQ({ ...newQ, text: '', options: ['', '', '', ''], keywords: '', points: 1 });
+                                        alert("Question Saved!");
+                                    }} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold uppercase shadow-lg">Save Question</button>
                                 </section>
-                                <section className="space-y-2 max-h-[600px] overflow-y-auto">
-                                    {questions.map((q)=>(
-                                        <div key={q.id} className="bg-white p-3 rounded border flex justify-between items-center shadow-sm">
-                                            <p className="text-[11px] font-bold"><span className="text-blue-500 mr-2">[{q.className}]</span> {q.questionText}</p>
-                                            <button onClick={async()=>await fb.deleteDoc(fb.doc(fb.db,"artifacts/my-project-a6208/public/data/questions",q.id))} className="text-red-400 font-bold text-[10px]">DEL</button>
+
+                                <section className="space-y-2">
+                                    <h2 className="font-black text-gray-400 text-xs uppercase mb-4">Current {activeTab === 'obj-questions' ? 'OBJ' : 'Theory'} Bank</h2>
+                                    {questions.filter(q => q.type === (activeTab === 'obj-questions' ? 'obj' : 'theory')).map((q)=>(
+                                        <div key={q.id} className="bg-white p-4 rounded-xl border flex justify-between items-center shadow-sm">
+                                            <div>
+                                                <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase">{q.className}</span>
+                                                <p className="font-bold text-sm mt-1">{q.questionText}</p>
+                                            </div>
+                                            <button onClick={async()=>await fb.deleteDoc(fb.doc(fb.db,"artifacts/my-project-a6208/public/data/questions",q.id))} className="text-red-400 font-bold text-xs uppercase">Del</button>
                                         </div>
                                     ))}
                                 </section>
@@ -217,86 +216,132 @@
 
         const StudentExamPage = () => {
             const { setPage } = React.useContext(AppContext);
+            const [isLive, setIsLive] = React.useState(null);
+            const [msId, setMsId] = React.useState('');
             const [student, setStudent] = React.useState(null);
             const [questions, setQuestions] = React.useState([]);
             const [index, setIndex] = React.useState(0);
-            const [answers, setAnswers] = React.useState({}); 
-            const [theoryAnswers, setTheoryAnswers] = React.useState({}); 
-            const [msId, setMsId] = React.useState('');
+            const [answers, setAnswers] = React.useState({});
             const [loading, setLoading] = React.useState(false);
             const [finished, setFinished] = React.useState(false);
+            const [finalDisplay, setFinalDisplay] = React.useState({ obj: 0, theory: 0, total: 0 });
+
+            React.useEffect(() => {
+                fb.onSnapshot(fb.doc(fb.db, "artifacts/my-project-a6208/settings/examControl"), (doc) => setIsLive(doc.exists() ? doc.data().isLive : false));
+            }, []);
 
             const verifyId = async () => {
                 setLoading(true);
                 const inputId = msId.toUpperCase().trim();
-                const { data } = await _supabase.from('students').select('*').eq('status', 'Enrolled');
-                const found = data?.find(s => ("MS-" + s.id.substring(0, 5).toUpperCase()) === inputId);
-                if (found) {
-                    setStudent({ name: found.full_name, id: inputId, className: found.grade_level || 'SSS 1' });
-                    const snap = await fb.getDocs(fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), fb.where("className", "==", found.grade_level || 'SSS 1')));
-                    setQuestions(snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => (a.type==='THEORY' ? 1 : -1)));
-                } else alert("Invalid ID");
+                try {
+                    const { data } = await _supabase.from('students').select('*').eq('status', 'Enrolled');
+                    const found = data?.find(s => ("MS-" + s.id.substring(0, 5).toUpperCase()) === inputId);
+                    
+                    if (found) {
+                        const scoreSnap = await fb.getDocs(fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), fb.where("studentId", "==", inputId)));
+                        if (!scoreSnap.empty) { alert("Already Submitted."); setLoading(false); return; }
+                        
+                        const rawClass = found.grade_level || found.class || 'SSS 1';
+                        setStudent({ name: found.full_name, id: inputId, className: rawClass });
+                        
+                        const snap = await fb.getDocs(fb.query(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), fb.where("className", "==", rawClass)));
+                        setQuestions(snap.docs.map(d => ({id: d.id, ...d.data()})));
+                    } else alert("Invalid Student ID.");
+                } catch (e) { alert("Error: " + e.message); }
                 setLoading(false);
             };
 
-            async function finishExam() {
-                if (!confirm("Submit?")) return;
-                let objCorrect = 0, autoScore = 0, marksRecord = {};
+            const finishExam = async () => {
+                if (!confirm("Confirm Submission?")) return;
+                let objScore = 0;
+                let theoryScore = 0;
+                
                 questions.forEach((q, i) => {
-                    if (q.type === 'THEORY') {
-                        let qm = 0; const ta = (theoryAnswers[i] || "").toLowerCase();
-                        if (q.keywords) q.keywords.split(',').forEach(k => { if(ta.includes(k.trim().toLowerCase())) qm += q.pointsPerKey; });
-                        autoScore += qm; marksRecord[i] = qm;
-                    } else if (answers[i] === q.correctOptionIndex) objCorrect++;
+                    const ans = answers[i];
+                    if (!ans) return;
+
+                    if (q.type === 'obj' || !q.type) {
+                        if (parseInt(ans) === q.correctOptionIndex) objScore += (q.points || 1);
+                    } else if (q.type === 'theory') {
+                        const studentText = ans.toLowerCase();
+                        let hits = 0;
+                        q.keywords.forEach(word => { if(studentText.includes(word)) hits++; });
+                        if (hits >= Math.ceil(q.keywords.length * 0.5)) theoryScore += (q.points || 2); 
+                    }
                 });
+
+                const totalFinal = objScore + theoryScore;
+                setFinalDisplay({ obj: objScore, theory: theoryScore, total: totalFinal });
+
                 await fb.addDoc(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), {
                     studentName: student.name, studentId: student.id, className: student.className,
-                    correctAnswers: objCorrect, theoryAnswers: theoryAnswers, theoryMarks: marksRecord,
-                    theoryScore: autoScore, date: new Date()
+                    objScore, theoryScore, totalScore: totalFinal, date: new Date()
                 });
                 setFinished(true);
-            }
+            };
 
-            if (finished) return <div className="text-center p-20 font-black">SUBMITTED SUCCESSFULLY! <button onClick={()=>setPage('home')} className="block mx-auto mt-4 underline">Back Home</button></div>;
+            if (isLive === false) return <div className="h-screen flex items-center justify-center bg-slate-900 text-white font-black">EXAM IS CURRENTLY CLOSED</div>;
+
+            if (finished) return (
+                <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center">
+                    <div className="bg-white p-10 rounded-3xl shadow-2xl border w-full max-w-md">
+                        <h1 className="text-2xl font-black mb-1 uppercase">Submission Successful</h1>
+                        <p className="font-bold text-gray-400 text-xs mb-4">{student.name}</p>
+                        <div className="bg-blue-50 p-6 rounded-2xl mb-6">
+                            <p className="text-[10px] font-black text-blue-400 uppercase">Your Result</p>
+                            <h2 className="text-5xl font-black text-blue-600">{finalDisplay.total}</h2>
+                        </div>
+                        <button onClick={() => window.location.reload()} className="w-full bg-black text-white py-4 rounded-xl font-black uppercase text-xs">Exit</button>
+                    </div>
+                </div>
+            );
 
             if (!student) return (
-                <div className="flex items-center justify-center min-h-screen">
-                    <div className="bg-white p-8 rounded-2xl shadow-xl border w-80 text-center">
-                        <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-12 mx-auto mb-4" />
-                        <h2 className="text-lg font-black mb-4">STUDENT LOGIN</h2>
-                        <input className="w-full p-3 border rounded-xl mb-4 text-center font-bold uppercase" placeholder="MS-XXXXX" onChange={e => setMsId(e.target.value)} />
-                        <button onClick={verifyId} className="w-full py-3 bg-blue-600 text-white rounded-xl font-black">{loading ? "WAIT..." : "START"}</button>
+                <div className="flex items-center justify-center min-h-screen p-4">
+                    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm border text-center">
+                        <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-16 mx-auto mb-6" />
+                        <h2 className="text-2xl font-black mb-6 uppercase">Student Login</h2>
+                        <input className="w-full p-4 border rounded-xl mb-4 uppercase text-center font-bold" placeholder="MS-XXXXX" onChange={e => setMsId(e.target.value)} />
+                        <button onClick={verifyId} className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold uppercase">{loading ? "Wait..." : "Start"}</button>
                     </div>
                 </div>
             );
 
             const q = questions[index];
-            if (!q) return null;
+            if (!q) return <div className="p-20 text-center font-black animate-pulse uppercase">Searching Questions...</div>;
 
             return (
-                <div className="max-w-xl mx-auto p-6 pt-10">
-                    <div className="flex justify-between mb-8 border-b pb-4">
-                        <span className="text-[10px] font-black uppercase">{student.name}</span>
-                        <span className="text-[10px] font-black text-blue-500">{index + 1} / {questions.length}</span>
+                <div className="max-w-2xl mx-auto p-6 pt-12">
+                    <div className="flex justify-between items-center mb-8 border-b pb-4">
+                        <div><p className="text-[10px] text-gray-400 font-black uppercase">{student.className}</p><h2 className="text-lg font-black uppercase">{student.name}</h2></div>
+                        <div className="bg-blue-600 text-white px-4 py-1 rounded-full font-black text-xs">{index + 1} / {questions.length}</div>
                     </div>
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border">
-                        <p className="font-bold text-lg mb-6 leading-tight">{q.questionText}</p>
-                        {q.type === 'THEORY' ? (
-                            <textarea className="w-full p-4 border rounded-xl h-40 bg-gray-50 text-sm" placeholder="Type answer here..." value={theoryAnswers[index] || ''} onChange={e=>setTheoryAnswers({...theoryAnswers, [index]: e.target.value})} />
+
+                    <div className="bg-white p-8 rounded-2xl shadow-sm border">
+                        <p className="text-lg font-bold mb-8 text-slate-800">{q.questionText}</p>
+                        
+                        {q.type === 'theory' ? (
+                            <textarea 
+                                className="w-full p-4 border-2 rounded-xl focus:border-blue-600 outline-none h-40 text-sm font-medium bg-gray-50"
+                                placeholder="Type your answer here..."
+                                value={answers[index] || ''}
+                                onChange={(e) => setAnswers({...answers, [index]: e.target.value})}
+                            />
                         ) : (
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                                 {q.options.map((opt, i) => (
-                                    <button key={i} onClick={() => setAnswers({...answers, [index]: i})} className={`w-full p-4 text-left rounded-xl border text-sm font-bold ${answers[index] === i ? 'bg-blue-600 text-white border-blue-600' : 'bg-white hover:bg-gray-50'}`}>
-                                        {opt}
+                                    <button key={i} onClick={() => setAnswers({...answers, [index]: i})} className={`w-full p-5 text-left rounded-xl border-2 transition font-medium text-sm ${answers[index] === i ? 'bg-blue-600 text-white border-blue-600 shadow-lg' : 'bg-white border-gray-100'}`}>
+                                        <span className="font-black mr-3">{optionLetters[i]}.</span> {opt}
                                     </button>
                                 ))}
                             </div>
                         )}
-                        <div className="flex justify-between mt-10">
-                            <button onClick={()=>setIndex(i=>i-1)} disabled={index===0} className="text-gray-400 font-bold text-xs disabled:opacity-0">BACK</button>
+
+                        <div className="mt-10 flex justify-between gap-4">
+                            <button onClick={() => setIndex(i => i - 1)} disabled={index === 0} className="px-6 py-3 text-gray-400 font-black disabled:opacity-0 uppercase text-[10px]">Back</button>
                             {index === questions.length - 1 ? 
-                                <button onClick={finishExam} className="bg-green-600 text-white px-8 py-3 rounded-xl font-bold text-xs">SUBMIT</button> :
-                                <button onClick={()=>setIndex(i=>i+1)} className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold text-xs">NEXT</button>
+                                <button onClick={finishExam} className="bg-green-600 text-white px-10 py-3 rounded-xl font-bold uppercase text-xs shadow-lg">Submit Final</button> : 
+                                <button onClick={() => setIndex(i => i + 1)} className="bg-blue-600 text-white px-10 py-3 rounded-xl font-bold uppercase text-xs shadow-lg">Next</button>
                             }
                         </div>
                     </div>
@@ -308,21 +353,23 @@
             const [page, setPage] = React.useState('home');
             const [ready, setReady] = React.useState(false);
             React.useEffect(() => { const i = setInterval(() => { if(window.fb) { setReady(true); clearInterval(i); }}, 100); }, []);
-            if (!ready) return <div className="p-20 text-center font-black">LOADING...</div>;
+            if (!ready) return <div className="p-20 text-center font-black text-blue-600 uppercase tracking-widest animate-pulse">Connecting...</div>;
 
             return (
                 <AppContext.Provider value={{ setPage }}>
-                    {page === 'home' ? (
-                        <div className="flex flex-col items-center justify-center min-h-screen text-center">
-                            <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-20 mb-6" />
-                            <h1 className="text-4xl font-black mb-1">Mustard Seed CBT</h1>
-                            <p className="text-gray-400 font-bold text-[10px] tracking-widest uppercase mb-10">Academic Excellence</p>
-                            <div className="flex gap-4">
-                                <button onClick={()=>setPage('exam')} className="bg-blue-600 text-white px-12 py-4 rounded-full font-black shadow-lg">STUDENT</button>
-                                <button onClick={()=>setPage('admin')} className="bg-white text-gray-500 px-12 py-4 rounded-full font-bold border">ADMIN</button>
+                    {page === 'home' && (
+                        <div className="flex flex-col items-center justify-center min-h-screen text-center p-6 bg-slate-50">
+                            <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-24 mb-6" />
+                            <h1 className="text-4xl font-black mb-2 uppercase tracking-tighter">Mustard Seed CBT</h1>
+                            <p className="text-gray-400 font-bold text-[10px] tracking-widest uppercase mb-10">Theory & OBJ Integrated</p>
+                            <div className="flex flex-col sm:flex-row gap-4">
+                                <button onClick={() => setPage('exam')} className="bg-blue-600 text-white px-12 py-4 rounded-full font-black shadow-xl">START EXAM</button>
+                                <button onClick={() => setPage('admin')} className="bg-white text-gray-500 px-12 py-4 rounded-full font-bold border hover:bg-gray-50 transition">ADMIN PANEL</button>
                             </div>
                         </div>
-                    ) : (page === 'exam' ? <StudentExamPage /> : <AdminPage />)}
+                    )}
+                    {page === 'exam' && <StudentExamPage />}
+                    {page === 'admin' && <AdminPage />}
                 </AppContext.Provider>
             );
         };

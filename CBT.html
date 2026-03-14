@@ -12,7 +12,6 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
         @media print { .no-print { display: none !important; } body { background: white; } }
-        /* Custom scrollbar for the large theory box */
         textarea::-webkit-scrollbar { width: 8px; }
         textarea::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
@@ -78,7 +77,10 @@
                 alert("Score Updated!"); setReviewData(null);
             };
 
-            const filteredScores = scores.filter(s => (resFilter === 'ALL' || s.className === resFilter) && (s.studentName.toLowerCase().includes(searchQuery.toLowerCase()) || s.studentId.toLowerCase().includes(searchQuery.toLowerCase())));
+            // RESTORED SORTING: Newest submissions at the top
+            const filteredScores = scores
+                .filter(s => (resFilter === 'ALL' || s.className === resFilter) && (s.studentName.toLowerCase().includes(searchQuery.toLowerCase()) || s.studentId.toLowerCase().includes(searchQuery.toLowerCase())))
+                .sort((a, b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
 
             if (!auth) return (
                 <div className="flex items-center justify-center min-h-screen bg-slate-900 p-4">
@@ -110,13 +112,19 @@
                                         <h3 className={`text-2xl font-black ${settings.isLive?'text-green-500':'text-red-500'}`}>{settings.isLive?'LIVE':'OFFLINE'}</h3>
                                         <button onClick={async()=>await fb.setDoc(fb.doc(fb.db,"artifacts/my-project-a6208/settings/examControl"),{...settings, isLive:!settings.isLive})} className="mt-4 w-full bg-slate-900 text-white py-2 rounded-lg text-[10px] font-black uppercase">Switch</button>
                                     </div>
+                                    
+                                    {/* RESTORED TIMER CONTROL BOX */}
                                     <div className="bg-white p-6 rounded-3xl border shadow-sm">
-                                        <p className="text-[10px] font-black text-gray-400 uppercase mb-2">Total Submissions</p>
-                                        <h3 className="text-4xl font-black text-blue-600">{scores.length}</h3>
+                                        <p className="text-[10px] font-black text-gray-400 uppercase mb-2">Exam Duration (Mins)</p>
+                                        <div className="flex gap-2">
+                                            <input type="number" className="w-full p-2 border-2 rounded-lg font-black text-blue-600" value={settings.duration} onChange={e => setSettings({...settings, duration: parseInt(e.target.value)})} />
+                                            <button onClick={async()=>await fb.setDoc(fb.doc(fb.db,"artifacts/my-project-a6208/settings/examControl"), settings)} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase">Set</button>
+                                        </div>
                                     </div>
-                                    <div className="bg-white p-6 rounded-3xl border shadow-sm">
-                                        <p className="text-[10px] font-black text-gray-400 uppercase mb-2">Total Questions</p>
-                                        <h3 className="text-4xl font-black text-slate-900">{questions.length}</h3>
+
+                                    <div className="bg-white p-6 rounded-3xl border shadow-sm text-center">
+                                        <p className="text-[10px] font-black text-gray-400 uppercase mb-2">Submissions</p>
+                                        <h3 className="text-4xl font-black text-blue-600">{scores.length}</h3>
                                     </div>
                                 </div>
 
@@ -150,7 +158,14 @@
                                 <div className="bg-white rounded-3xl border shadow-sm overflow-hidden">
                                     <table className="w-full text-left">
                                         <thead className="bg-slate-50 border-b text-[9px] font-black uppercase text-gray-400">
-                                            <tr><th className="p-5 tracking-widest">Student</th><th className="p-5">OBJ</th><th className="p-5">THY</th><th className="p-5">Total</th><th className="p-5 no-print">Delete</th></tr>
+                                            <tr>
+                                                <th className="p-5 tracking-widest">Student</th>
+                                                <th className="p-5">OBJ</th>
+                                                <th className="p-5">THY</th>
+                                                <th className="p-5">Total</th>
+                                                <th className="p-5">Time/Date</th>
+                                                <th className="p-5 no-print">Delete</th>
+                                            </tr>
                                         </thead>
                                         <tbody className="text-sm">
                                             {filteredScores.map(s=>(
@@ -159,6 +174,9 @@
                                                     <td className="p-5 font-bold text-slate-400">{s.objScore || 0}</td>
                                                     <td className="p-5 font-bold text-slate-400">{s.theoryScore || 0}</td>
                                                     <td className="p-5"><span className="bg-blue-600 text-white px-3 py-1 rounded-full font-black text-xs">{s.totalScore || 0}</span></td>
+                                                    <td className="p-5 text-[10px] font-bold text-gray-400">
+                                                        {s.date?.seconds ? new Date(s.date.seconds * 1000).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                                                    </td>
                                                     <td className="p-5 no-print">
                                                         <button onClick={(e)=> {e.stopPropagation(); if(confirm("Del?")) fb.deleteDoc(fb.doc(fb.db,"artifacts/my-project-a6208/scores",s.id))}} className="text-red-400 text-xs font-black">X</button>
                                                     </td>
@@ -169,7 +187,7 @@
                                 </div>
                                 {reviewData && (
                                     <div className="fixed inset-0 bg-slate-900/90 flex items-center justify-center p-4 z-50 no-print">
-                                        <div className="bg-white w-full max-w-2xl rounded-3xl p-8 max-h-[85vh] overflow-y-auto">
+                                        <div className="bg-white w-full max-w-2xl rounded-3xl p-8 max-h-[85vh] overflow-y-auto text-slate-900">
                                             <div className="flex justify-between items-center mb-6">
                                                 <h3 className="font-black text-xl uppercase tracking-tighter">{reviewData.studentName}</h3>
                                                 <button onClick={()=>setReviewData(null)} className="text-red-500 font-black text-xs uppercase">Close</button>
@@ -197,7 +215,7 @@
 
                         {activeTab === 'questions' && (
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                                <section className="bg-white p-8 rounded-3xl border shadow-sm h-fit sticky top-10">
+                                <section className="bg-white p-8 rounded-3xl border shadow-sm h-fit sticky top-10 text-slate-900">
                                     <h2 className="text-xl font-black mb-6 uppercase">Add Question</h2>
                                     <div className="flex gap-2 mb-4">
                                         {['obj', 'theory'].map(t => (
@@ -235,7 +253,7 @@
                                     <h2 className="font-black text-gray-400 text-[10px] uppercase mb-4">Question List</h2>
                                     {questions.sort((a,b)=>a.className > b.className ? 1 : -1).map((q)=>(
                                         <div key={q.id} className="bg-white p-4 rounded-2xl border flex justify-between items-center shadow-sm">
-                                            <div className="pr-4"><span className="text-[8px] font-black text-blue-500 bg-blue-50 px-2 py-1 rounded uppercase">{q.className} | {q.type || 'obj'}</span><p className="font-bold text-xs mt-1 text-slate-700">{q.questionText}</p></div>
+                                            <div className="pr-4"><span className="text-[8px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded uppercase">{q.className} | {q.type || 'obj'}</span><p className="font-bold text-xs mt-1 text-slate-700">{q.questionText}</p></div>
                                             <button onClick={async()=> {if(confirm("Del?")) await fb.deleteDoc(fb.doc(fb.db,"artifacts/my-project-a6208/public/data/questions",q.id))}} className="text-red-400 font-black text-xs">X</button>
                                         </div>
                                     ))}
@@ -305,7 +323,7 @@
             if (settings.isLive === false) return <div className="h-screen flex items-center justify-center bg-slate-900 text-white font-black uppercase tracking-[0.5em]">Portal Offline</div>;
             
             if (finished) return (
-                <div className="flex flex-col items-center justify-center min-h-screen bg-white p-6 text-center">
+                <div className="flex flex-col items-center justify-center min-h-screen bg-white p-6 text-center text-slate-900">
                     <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-16 mb-8" />
                     <h1 className="text-3xl font-black uppercase tracking-tighter text-slate-800 mb-4">Congratulations 🎉</h1>
                     <p className="text-sm font-bold text-slate-500 mb-10 max-w-xs uppercase tracking-tight">Exam submitted successfully. Go to portal to check results.</p>
@@ -314,7 +332,7 @@
             );
 
             if (!student) return (
-                <div className="flex items-center justify-center min-h-screen bg-slate-50 p-4">
+                <div className="flex items-center justify-center min-h-screen bg-slate-50 p-4 text-slate-900">
                     <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl w-full max-w-sm border text-center">
                         <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-20 mx-auto mb-8" />
                         <h2 className="text-2xl font-black mb-8 uppercase tracking-tighter text-slate-900">Student Portal</h2>
@@ -328,8 +346,7 @@
             const formatTime = (s) => `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
 
             return (
-                <div className="max-w-4xl mx-auto p-4 md:p-8">
-                    {/* Compact One-Line Header */}
+                <div className="max-w-4xl mx-auto p-4 md:p-8 text-slate-900">
                     <div className="flex justify-between items-center mb-6 bg-slate-900 text-white p-4 rounded-2xl shadow-lg">
                         <div className="flex items-center gap-3">
                             <span className="bg-blue-600 px-2 py-1 rounded text-[9px] font-black uppercase tracking-tighter">{student.className}</span>
@@ -348,7 +365,6 @@
                                 <p className="text-xl md:text-2xl font-black text-slate-800 leading-tight">{q.questionText}</p>
                             </div>
 
-                            {/* Larger Adjusted Box and Options */}
                             <div className="flex-grow">
                                 {q.type === 'theory' ? (
                                     <textarea className="w-full p-6 border-2 rounded-2xl h-[300px] bg-slate-50 outline-none text-base font-medium focus:border-blue-400 transition" placeholder="Provide your detailed answer here..." value={answers[index] || ''} onChange={e=>setAnswers({...answers, [index]: e.target.value})} />
@@ -388,7 +404,7 @@
             return (
                 <AppContext.Provider value={{ setPage }}>
                     {page === 'home' && (
-                        <div className="flex flex-col items-center justify-center min-h-screen text-center p-6 bg-slate-50">
+                        <div className="flex flex-col items-center justify-center min-h-screen text-center p-6 bg-slate-50 text-slate-900">
                             <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-28 mb-8" />
                             <h1 className="text-5xl font-black mb-2 uppercase tracking-tighter text-slate-900">MUSTARD SEED</h1>
                             <p className="text-slate-400 font-black text-[10px] tracking-[0.4em] uppercase mb-16">Advanced Computer Assessment Portal</p>

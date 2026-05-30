@@ -150,7 +150,8 @@
                                         <p className="text-[10px] font-black text-gray-400 uppercase mb-2">Marks Per OBJ Question</p>
                                         <div className="flex gap-2">
                                             <input type="number" className="w-full p-2 border-2 rounded-lg font-black text-emerald-600 text-sm" value={settings.globalObjMark} onChange={e => setSettings({...settings, globalObjMark: parseInt(e.target.value) || 0})} />
-                                            <button onClick={async()=>await fb.setDoc(fb.doc(fb.doc(fb.db,"artifacts/my-project-a6208/settings/examControl"), settings))} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-[10px] font-black uppercase">Assign</button>
+                                            {/* To THIS clean line: */}
+<button onClick={async()=>await fb.setDoc(fb.doc(fb.db,"artifacts/my-project-a6208/settings/examControl"), settings)} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-[10px] font-black uppercase">Assign</button>
                                         </div>
                                     </div>
 

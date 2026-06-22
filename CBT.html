@@ -19,6 +19,7 @@
 <body class="bg-gray-50">
     <div id="root"></div>
 
+    <!-- INITIALIZE FIREBASE DIRECTLY ON WINDOW OBJECT -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -38,8 +39,12 @@
             db: getFirestore(app), auth: getAuth(app),
             collection, addDoc, getDocs, doc, deleteDoc, onSnapshot, query, where, signInAnonymously, onAuthStateChanged, setDoc, writeBatch, updateDoc
         };
+        
+        // Dispatch custom event to notify React app that Firebase is officially ready
+        window.dispatchEvent(new Event('firebaseReady'));
     </script>
 
+    <!-- REACT WEB APP INTERFACE -->
     <script type="text/babel">
         const { createClient } = window.supabase;
         const SB_URL = 'https://jqrcoqslmylmubxwfgyt.supabase.co';
@@ -54,7 +59,7 @@
             const [auth, setAuth] = React.useState(false);
             const [pass, setPass] = React.useState('');
             const [activeTab, setActiveTab] = React.useState('dashboard'); 
-            const [isNavOpen, setIsNavOpen] = React.useState(false); // Collapsible Navigation State
+            const [isNavOpen, setIsNavOpen] = React.useState(false); 
             const [scores, setScores] = React.useState([]);
             const [questions, setQuestions] = React.useState([]);
             const [settings, setSettings] = React.useState({ isLive: false, duration: 40, globalObjMark: 2 });
@@ -65,10 +70,12 @@
             const [newQ, setNewQ] = React.useState({ text: '', options: ['', '', '', ''], correct: 0, className: 'SSS 1', type: 'obj', keywords: '', points: 5 });
 
             React.useEffect(() => {
-                if (!auth) return;
-                fb.onSnapshot(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), (s) => setScores(s.docs.map(d => ({id: d.id, ...d.data()}))));
-                fb.onSnapshot(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), (s) => setQuestions(s.docs.map(d => ({id: d.id, ...d.data()}))));
-                fb.onSnapshot(fb.doc(fb.db, "artifacts/my-project-a6208/settings/examControl"), (doc) => { 
+                if (!auth || !window.fb) return;
+                const fb = window.fb;
+                
+                const unsubScores = fb.onSnapshot(fb.collection(fb.db, "artifacts/my-project-a6208/scores"), (s) => setScores(s.docs.map(d => ({id: d.id, ...d.data()}))));
+                const unsubQuestions = fb.onSnapshot(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), (s) => setQuestions(s.docs.map(d => ({id: d.id, ...d.data()}))));
+                const unsubSettings = fb.onSnapshot(fb.doc(fb.db, "artifacts/my-project-a6208/settings/examControl"), (doc) => { 
                     if (doc.exists()) {
                         const data = doc.data();
                         setSettings({
@@ -78,9 +85,12 @@
                         });
                     } 
                 });
+
+                return () => { unsubScores(); unsubQuestions(); unsubSettings(); };
             }, [auth]);
 
             const updateTheoryGrade = async () => {
+                const fb = window.fb;
                 const newThy = parseInt(manualThyScore);
                 const newTotal = (reviewData.objScore || 0) + newThy;
                 await fb.updateDoc(fb.doc(fb.db, "artifacts/my-project-a6208/scores", reviewData.id), { theoryScore: newThy, totalScore: newTotal });
@@ -104,11 +114,9 @@
             return (
                 <div className="flex min-h-screen bg-gray-50">
                     <aside className="w-64 bg-slate-900 text-white p-6 fixed h-full hidden md:block no-print">
-                        <h1 className="text-xs font-black text-blue-400 uppercase tracking-widest mb-10 text-center">Mustard Seed CBT</h1>
+                        <h1 class="text-xs font-black text-blue-400 uppercase tracking-widest mb-10 text-center">Mustard Seed CBT</h1>
                         <nav className="space-y-2">
                             <button onClick={()=>setActiveTab('dashboard')} className={`w-full text-left p-4 rounded-xl font-black text-[10px] uppercase tracking-widest transition ${activeTab==='dashboard'?'bg-blue-600':'text-gray-500 hover:text-white'}`}>Dashboard</button>
-                            
-                            {/* Collapsible Navigation Bar Menu wrapper */}
                             <div>
                                 <button onClick={() => setIsNavOpen(!isNavOpen)} className="w-full text-left p-4 rounded-xl font-black text-[10px] uppercase tracking-widest text-gray-500 hover:text-white flex justify-between items-center transition">
                                     <span>Question Bank</span>
@@ -122,7 +130,6 @@
                                     </div>
                                 )}
                             </div>
-
                             <button onClick={()=>setActiveTab('results')} className={`w-full text-left p-4 rounded-xl font-black text-[10px] uppercase tracking-widest transition ${activeTab==='results'?'bg-blue-600':'text-gray-500 hover:text-white'}`}>Results</button>
                         </nav>
                     </aside>
@@ -134,33 +141,27 @@
                                     <div className="bg-white p-6 rounded-3xl border shadow-sm">
                                         <p className="text-[10px] font-black text-gray-400 uppercase mb-2">Portal Status</p>
                                         <h3 className={`text-2xl font-black ${settings.isLive?'text-green-500':'text-red-500'}`}>{settings.isLive?'LIVE':'OFFLINE'}</h3>
-                                        <button onClick={async()=>await fb.setDoc(fb.doc(fb.db,"artifacts/my-project-a6208/settings/examControl"),{...settings, isLive:!settings.isLive})} className="mt-4 w-full bg-slate-900 text-white py-2 rounded-lg text-[10px] font-black uppercase">Switch</button>
+                                        <button onClick={async()=>await window.fb.setDoc(window.fb.doc(window.fb.db,"artifacts/my-project-a6208/settings/examControl"),{...settings, isLive:!settings.isLive})} className="mt-4 w-full bg-slate-900 text-white py-2 rounded-lg text-[10px] font-black uppercase">Switch</button>
                                     </div>
-                                    
                                     <div className="bg-white p-6 rounded-3xl border shadow-sm">
                                         <p className="text-[10px] font-black text-gray-400 uppercase mb-2">Exam Duration (Mins)</p>
                                         <div className="flex gap-2">
                                             <input type="number" className="w-full p-2 border-2 rounded-lg font-black text-blue-600 text-sm" value={settings.duration} onChange={e => setSettings({...settings, duration: parseInt(e.target.value) || 0})} />
-                                            <button onClick={async()=>await fb.setDoc(fb.doc(fb.db,"artifacts/my-project-a6208/settings/examControl"), settings)} className="bg-blue-600 text-white px-3 py-2 rounded-lg text-[10px] font-black uppercase">Set</button>
+                                            <button onClick={async()=>await window.fb.setDoc(window.fb.doc(window.fb.db,"artifacts/my-project-a6208/settings/examControl"), settings)} className="bg-blue-600 text-white px-3 py-2 rounded-lg text-[10px] font-black uppercase">Set</button>
                                         </div>
                                     </div>
-
-                                    {/* Global Assignment input box element */}
                                     <div className="bg-white p-6 rounded-3xl border shadow-sm">
                                         <p className="text-[10px] font-black text-gray-400 uppercase mb-2">Marks Per OBJ Question</p>
                                         <div className="flex gap-2">
                                             <input type="number" className="w-full p-2 border-2 rounded-lg font-black text-emerald-600 text-sm" value={settings.globalObjMark} onChange={e => setSettings({...settings, globalObjMark: parseInt(e.target.value) || 0})} />
-                                            {/* To THIS clean line: */}
-<button onClick={async()=>await fb.setDoc(fb.doc(fb.db,"artifacts/my-project-a6208/settings/examControl"), settings)} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-[10px] font-black uppercase">Assign</button>
+                                            <button onClick={async()=>await window.fb.setDoc(window.fb.doc(window.fb.db,"artifacts/my-project-a6208/settings/examControl"), settings)} className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-[10px] font-black uppercase">Assign</button>
                                         </div>
                                     </div>
-
                                     <div className="bg-white p-6 rounded-3xl border shadow-sm text-center">
                                         <p className="text-[10px] font-black text-gray-400 uppercase mb-2">Submissions</p>
                                         <h3 className="text-4xl font-black text-blue-600">{scores.length}</h3>
                                     </div>
                                 </div>
-
                                 <div className="bg-white p-8 rounded-[2rem] border shadow-sm">
                                     <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6 border-b pb-4">Question Count Per Class</h2>
                                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-center">
@@ -190,7 +191,7 @@
                                 </div>
                                 <div className="bg-white rounded-3xl border shadow-sm overflow-hidden">
                                     <table className="w-full text-left">
-                                        <thead className="bg-slate-50 border-b text-[9px] font-black uppercase text-gray-400">
+                                        <thead class="bg-slate-50 border-b text-[9px] font-black uppercase text-gray-400">
                                             <tr>
                                                 <th className="p-5 tracking-widest">Student</th>
                                                 <th className="p-5">OBJ</th>
@@ -211,7 +212,7 @@
                                                         {s.date?.seconds ? new Date(s.date.seconds * 1000).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '--:--'}
                                                     </td>
                                                     <td className="p-5 no-print">
-                                                        <button onClick={(e)=> {e.stopPropagation(); if(confirm("Del?")) fb.deleteDoc(fb.doc(fb.db,"artifacts/my-project-a6208/scores",s.id))}} className="text-red-400 text-xs font-black">X</button>
+                                                        <button onClick={(e)=> {e.stopPropagation(); if(confirm("Del?")) window.fb.deleteDoc(window.fb.doc(window.fb.db,"artifacts/my-project-a6208/scores",s.id))}} className="text-red-400 text-xs font-black">X</button>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -274,6 +275,7 @@
                                     </select>
                                     <button onClick={async()=>{
                                         if(!newQ.text) return;
+                                        const fb = window.fb;
                                         await fb.addDoc(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), {
                                             questionText: newQ.text, options: newQ.type==='obj'?newQ.options:[], 
                                             correctOptionIndex: newQ.type==='obj'?newQ.correct:null, className: newQ.className,
@@ -291,10 +293,8 @@
                                                     <span className="text-[8px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded uppercase">{q.className} | {q.type || 'obj'}</span>
                                                     <p className="font-bold text-xs mt-1 text-slate-700">{q.questionText}</p>
                                                 </div>
-                                                <button onClick={async()=> {if(confirm("Del?")) await fb.deleteDoc(fb.doc(fb.db,"artifacts/my-project-a6208/public/data/questions",q.id))}} className="text-red-400 font-black text-xs">X</button>
+                                                <button onClick={async()=> {if(confirm("Del?")) await window.fb.deleteDoc(window.fb.doc(window.fb.db,"artifacts/my-project-a6208/public/data/questions",q.id))}} className="text-red-400 font-black text-xs">X</button>
                                             </div>
-                                            
-                                            {/* Correct Answer Display section */}
                                             {(!q.type || q.type === 'obj') && q.options && q.options[q.correctOptionIndex] !== undefined && (
                                                 <div className="bg-emerald-50 text-emerald-800 p-2 rounded-xl text-[11px] font-black tracking-wide border border-emerald-100">
                                                     Correct Option: {String.fromCharCode(64 + parseInt(q.correctOptionIndex) + 1)}; {q.options[q.correctOptionIndex]}
@@ -322,7 +322,10 @@
             const [finished, setFinished] = React.useState(false);
 
             React.useEffect(() => {
-                fb.onSnapshot(fb.doc(fb.db, "artifacts/my-project-a6208/settings/examControl"), (doc) => {
+                if (!window.fb) return;
+                const fb = window.fb;
+                
+                const unsub = fb.onSnapshot(fb.doc(fb.db, "artifacts/my-project-a6208/settings/examControl"), (doc) => {
                     if (doc.exists()) {
                         const data = doc.data(); 
                         const activeControl = {
@@ -334,6 +337,7 @@
                         if (timeLeft === 0 && !student) setTimeLeft(activeControl.duration * 60);
                     }
                 });
+                return () => unsub();
             }, []);
 
             React.useEffect(() => {
@@ -345,6 +349,7 @@
 
             const verify = async () => {
                 setLoading(true); const inputId = msId.toUpperCase().trim();
+                const fb = window.fb;
                 try {
                     const { data } = await _supabase.from('students').select('*').eq('status', 'Enrolled');
                     const found = data?.find(s => ("MS-" + s.id.substring(0, 5).toUpperCase()) === inputId);
@@ -361,6 +366,7 @@
             };
 
             const submit = async () => {
+                const fb = window.fb;
                 let obj = 0; let thy = 0; let theoryResponses = {};
                 const currentMarkPerQuestion = settings.globalObjMark !== undefined ? settings.globalObjMark : 2;
                 
@@ -457,8 +463,22 @@
         const App = () => {
             const [page, setPage] = React.useState('home');
             const [ready, setReady] = React.useState(false);
-            React.useEffect(() => { const i = setInterval(() => { if(window.fb) { setReady(true); clearInterval(i); }}, 100); }, []);
-            if (!ready) return <div className="h-screen flex items-center justify-center font-black text-blue-600 uppercase tracking-[0.5em] animate-pulse">Syncing...</div>;
+
+            React.useEffect(() => {
+                // Check if already loaded
+                if (window.fb) {
+                    setReady(true);
+                    return;
+                }
+                
+                // Otherwise, listen for our custom module event
+                const handleFirebaseReady = () => setReady(true);
+                window.addEventListener('firebaseReady', handleFirebaseReady);
+                
+                return () => window.removeEventListener('firebaseReady', handleFirebaseReady);
+            }, []);
+
+            if (!ready) return <div className="h-screen flex items-center justify-center font-black text-blue-600 uppercase tracking-[0.5em] animate-pulse">Syncing Database Modules...</div>;
 
             return (
                 <AppContext.Provider value={{ setPage }}>

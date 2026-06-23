@@ -156,7 +156,8 @@
                             )
                         ),
                         e('button', { onClick: () => setActiveTab('results'), className: `w-full text-left p-4 rounded-xl font-black text-[10px] uppercase tracking-widest transition ${activeTab === 'results' ? 'bg-blue-600' : 'text-gray-500 hover:text-white'}` }, 'Results'),
-                        e('button', { onClick: handleAdminLogout, className: 'w-full text-left p-4 rounded-xl font-black text-[10px] uppercase tracking-widest text-red-400 hover:text-red-500 mt-10 border border-red-900/30' }, 'Secure Logout')
+                       e('a', { href: 'bulk-upload.html?token=SUNNYKEYZ2025@', target: '_blank', className: 'block w-full text-left p-4 rounded-xl font-black text-[10px] uppercase tracking-widest text-emerald-400 hover:bg-emerald-950/50 mt-2 border border-emerald-900/30 bg-emerald-950/10' }, '🚀 Open Bulk Uploader'),
+                      e('button', { onClick: handleAdminLogout, className: 'w-full text-left p-4 rounded-xl font-black text-[10px] uppercase tracking-widest text-red-400 hover:text-red-500 mt-10 border border-red-900/30' }, 'Secure Logout')
                     )
                 ),
                 e('main', { className: 'flex-1 md:ml-64 p-4 md:p-10' },

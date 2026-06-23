@@ -7,8 +7,6 @@
     <title>Mustard Seed CBT - Secure Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <style>
         @media print { .no-print { display: none !important; } body { background: white; } }
         textarea::-webkit-scrollbar { width: 8px; }
@@ -18,9 +16,12 @@
 <body class="bg-gray-50">
     <div id="root"></div>
 
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, onSnapshot, query, where, setDoc, writeBatch, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -35,7 +36,7 @@
         const app = initializeApp(firebaseConfig);
         window.fb = {
             db: getFirestore(app), auth: getAuth(app),
-            collection, addDoc, getDocs, doc, deleteDoc, onSnapshot, query, where, signInAnonymously, onAuthStateChanged, setDoc, writeBatch, updateDoc, signInWithEmailAndPassword, signOut
+            collection, addDoc, getDocs, doc, deleteDoc, onSnapshot, query, where, signInAnonymously, setDoc, writeBatch, updateDoc
         };
     </script>
 
@@ -64,15 +65,20 @@
             const [manualThyScore, setManualThyScore] = React.useState('');
             const [newQ, setNewQ] = React.useState({ text: '', options: ['', '', '', ''], correct: 0, className: 'SSS 1', type: 'obj', keywords: '', points: 5 });
 
+            // Check current Supabase Auth Session
             React.useEffect(() => {
-                const unsub = window.fb.onAuthStateChanged(window.fb.auth, (user) => {
-                    if (user && !user.isAnonymous) {
-                        setAuth(true);
-                    } else {
-                        setAuth(false);
-                    }
+                const checkUser = async () => {
+                    const { data: { session } } = await _supabase.auth.getSession();
+                    if (session) setAuth(true);
+                };
+                checkUser();
+
+                const { data: { subscription } } = _supabase.auth.onAuthStateChange((_event, session) => {
+                    if (session) setAuth(true);
+                    else setAuth(false);
                 });
-                return () => unsub();
+
+                return () => subscription.unsubscribe();
             }, []);
 
             React.useEffect(() => {
@@ -96,7 +102,12 @@
                 if (!email || !pass) return alert("Enter both email and password.");
                 setLoadingLogin(true);
                 try {
-                    await window.fb.signInWithEmailAndPassword(window.fb.auth, email.trim(), pass);
+                    const { data, error } = await _supabase.auth.signInWithPassword({
+                        email: email.trim(),
+                        password: pass,
+                    });
+                    if (error) throw error;
+                    setAuth(true);
                 } catch (err) {
                     alert("Access Denied: Invalid Admin Credentials.");
                 }
@@ -104,7 +115,7 @@
             };
 
             const handleAdminLogout = async () => {
-                await window.fb.signOut(window.fb.auth);
+                await _supabase.auth.signOut();
                 setAuth(false);
                 window.location.reload();
             };
@@ -123,9 +134,9 @@
             if (!auth) return e('div', { className: 'flex items-center justify-center min-h-screen bg-slate-900 p-4' },
                 e('div', { className: 'bg-white p-10 rounded-3xl shadow-2xl w-full max-w-sm text-center' },
                     e('img', { src: 'https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png', className: 'w-16 mx-auto mb-6' }),
-                    e('h2', { className: 'text-xl font-black mb-4 text-slate-800 uppercase' }, 'Secure Admin Access'),
+                    e('h2', { className: 'text-xl font-black mb-4 text-slate-800 uppercase' }, 'Supabase Admin Access'),
                     e('input', { type: 'email', placeholder: 'Admin Email', className: 'w-full p-4 border-2 rounded-xl mb-3 text-center font-bold text-sm outline-none focus:border-blue-500', value: email, onChange: e => setEmail(e.target.value) }),
-                    e('input', { type: 'password', placeholder: 'Secret Passcode', className: 'w-full p-4 border-2 rounded-xl mb-4 text-center font-bold text-sm outline-none focus:border-blue-500', value: pass, onChange: e => setPass(e.target.value) }),
+                    e('input', { type: 'password', placeholder: 'Password', className: 'w-full p-4 border-2 rounded-xl mb-4 text-center font-bold text-sm outline-none focus:border-blue-500', value: pass, onChange: e => setPass(e.target.value) }),
                     e('button', { onClick: handleAdminLogin, className: 'w-full bg-blue-600 text-white py-4 rounded-xl font-black uppercase tracking-wider text-xs' }, loadingLogin ? 'Authenticating...' : 'Secure Login')
                 )
             );
@@ -389,7 +400,6 @@
                 )
             );
 
-            // CUSTOM NOTICE ALERT SCREEN IF QUESTIONS ARE ZERO FOR A STUDENT'S CLASS
             if (hasCheckedQuestions && questions.length === 0) {
                 return e('div', { className: 'flex flex-col items-center justify-center min-h-screen bg-white p-6 text-center text-slate-900' },
                     e('div', { className: 'bg-red-50 border border-red-100 p-8 rounded-[2.5rem] max-w-sm w-full shadow-lg' },
@@ -441,10 +451,6 @@
 
         const App = () => {
             const [page, setPage] = React.useState('home');
-            const [ready, setReady] = React.useState(false);
-            React.useEffect(() => { const i = setInterval(() => { if (window.fb) { setReady(true); clearInterval(i); } }, 100); }, []);
-            if (!ready) return e('div', { className: 'h-screen flex items-center justify-center font-black text-blue-600 uppercase tracking-[0.5em] animate-pulse' }, 'Syncing...');
-
             return e(AppContext.Provider, { value: { setPage } },
                 page === 'home' && e('div', { className: 'flex flex-col items-center justify-center min-h-screen text-center p-6 bg-slate-50 text-slate-900' },
                     e('img', { src: 'https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png', className: 'w-28 mb-8' }),

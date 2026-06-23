@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" type="image/x-icon" href="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mustard Seed CBT - Secure Bulk Upload</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4">
+    <div id="root" class="w-full max-w-2xl"></div>
+
+    <!-- Firebase Configuration -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDOO3uHmzOuAxJcdLxu-OImzlH12A6FpeY",
+            authDomain: "my-project-a6208.firebaseapp.com",
+            projectId: "my-project-a6208",
+            storageBucket: "my-project-a6208.firebasestorage.app",
+            messagingSenderId: "784486701962",
+            appId: "1:784486701962:web:0d3cd002bbfd647e944673"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        window.fb = { db: getFirestore(app), collection, addDoc };
+    </script>
+
+    <!-- React App Container -->
+    <script type="text/babel">
+        const ADMIN_PASSWORD = 'SUNNYKEYZ2025@';
+        const CLASSES = ['SSS 1', 'SSS 2', 'SSS 3', 'JSS 1', 'JSS 2', 'JSS 3'];
+
+        const BulkUploadApp = () => {
+            const [isAuthorized, setIsAuthorized] = React.useState(null);
+            const [selectedClass, setSelectedClass] = React.useState('SSS 1');
+            const [batchText, setBatchText] = React.useState('');
+            const [uploading, setUploading] = React.useState(false);
+
+            // Security check on mount
+            React.useEffect(() => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const token = urlParams.get('token');
+
+                if (token === ADMIN_PASSWORD) {
+                    setIsAuthorized(true);
+                } else {
+                    setIsAuthorized(false);
+                    // Kick them out after 3 seconds back to home page
+                    setTimeout(() => {
+                        window.location.href = "CBT (5).html"; 
+                    }, 3000);
+                }
+            }, []);
+
+            const parseRawText = (text) => {
+                if (!text.trim()) return [];
+                const structuralBlocks = text.split(/\n(?=\d+[\)\.]\s*)/);
+                const formattedQuestions = [];
+
+                structuralBlocks.forEach(block => {
+                    const lines = block.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+                    if (lines.length < 3) return;
+
+                    let questionText = "";
+                    let options = [];
+                    let correctLetter = "";
+
+                    lines.forEach(line => {
+                        if (/^\d+[\)\.]/.test(line)) {
+                            questionText = line.replace(/^\d+[\)\.]\s*/, '');
+                        } else if (/^[aAbBdDeE][\)\.]/.test(line)) {
+                            options.push(line.replace(/^[aAbBdDeE][\)\.]\s*/, ''));
+                        } else if (/^Correct:\s*/i.test(line)) {
+                            correctLetter = line.replace(/^Correct:\s*/i, '').trim().toLowerCase();
+                        }
+                    });
+
+                    if (questionText && options.length > 0) {
+                        let correctIndex = 0;
+                        if (correctLetter === 'b') correctIndex = 1;
+                        if (correctLetter === 'd') correctIndex = 2;
+                        if (correctLetter === 'e') correctIndex = 3;
+
+                        formattedQuestions.push({
+                            questionText: questionText,
+                            options: options,
+                            correctOptionIndex: correctIndex
+                        });
+                    }
+                });
+                return formattedQuestions;
+            };
+
+            if (isAuthorized === null) {
+                return <div className="text-center font-black tracking-widest animate-pulse">VERIFYING SECURITY...</div>;
+            }
+
+            if (isAuthorized === false) {
+                return (
+                    <div className="bg-red-950 border border-red-500 text-red-200 p-8 rounded-3xl text-center shadow-2xl">
+                        <h1 className="text-2xl font-black mb-2">⛔ ACCESS DENIED</h1>
+                        <p className="text-sm font-bold opacity-80 uppercase tracking-wider">Invalid security token. Redirecting to safety...</p>
+                    </div>
+                );
+            }
+
+            const parsedCount = parseRawText(batchText).length;
+
+            return (
+                <div className="bg-white text-slate-900 p-8 rounded-[2.5rem] shadow-2xl border">
+                    <div className="flex items-center justify-between mb-6 border-b pb-4">
+                        <div>
+                            <h2 className="text-xl font-black uppercase tracking-tight text-emerald-600">Secure Bulk Parser</h2>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase">Authenticated Session</p>
+                        </div>
+                        <img src="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png" className="w-12" />
+                    </div>
+
+                    <div className="mb-4">
+                        <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2">Target Class Channel</label>
+                        <select className="w-full p-4 border rounded-2xl font-black text-xs uppercase bg-emerald-50 outline-none" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
+                            {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                    </div>
+
+                    <div className="mb-4">
+                        <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2">Raw Question Data Pasteboard</label>
+                        <textarea 
+                            className="w-full p-4 border rounded-2xl bg-slate-50 font-mono text-xs h-64 outline-none focus:border-emerald-500 transition leading-relaxed" 
+                            placeholder={"1. Computer part used to type is?\na) Monitor\nb) Keyboard\nd) Mouse\ne) Printer\nCorrect: b"} 
+                            value={batchText} 
+                            onChange={e => setBatchText(e.target.value)} 
+                        />
+                    </div>
+
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-dashed text-center">
+                        <p className="text-xs font-black text-slate-600 uppercase mb-3">
+                            {parsedCount} questions identified in string framework.
+                        </p>
+                        <button 
+                            onClick={async () => {
+                                const parsed = parseRawText(batchText);
+                                if(parsed.length === 0) return alert("No valid question schemas extracted.");
+                                if(!confirm(`Commit ${parsed.length} items to database for ${selectedClass}?`)) return;
+                                
+                                setUploading(true);
+                                try {
+                                    for(let q of parsed) {
+                                        await fb.addDoc(fb.collection(fb.db, "artifacts/my-project-a6208/public/data/questions"), {
+                                            className: selectedClass,
+                                            questionText: q.questionText,
+                                            options: q.options,
+                                            correctOptionIndex: q.correctOptionIndex,
+                                            type: 'obj',
+                                            keywords: [],
+                                            points: 2
+                                        });
+                                    }
+                                    alert(`Successfully pushed ${parsed.length} database entries!`);
+                                    setBatchText('');
+                                } catch(err) {
+                                    alert("Database write error: " + err.message);
+                                }
+                                setUploading(false);
+                            }} 
+                            disabled={uploading || parsedCount === 0}
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white py-4 rounded-xl font-black uppercase text-xs tracking-wider transition shadow-lg"
+                        >
+                            {uploading ? "Executing System Write..." : `Deploy Bulk Upload to ${selectedClass}`}
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<BulkUploadApp />);
+    </script>
+</body>
+</html>

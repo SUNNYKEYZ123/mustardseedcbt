@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" type="image/x-icon" href="https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mustard Seed CBT - Question Backup Utility</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4">
+    <div id="root" class="w-full max-w-xl"></div>
+
+    <!-- React Engine Components -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+    <!-- Firebase Connection Framework -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDOO3uHmzOuAxJcdLxu-OImzlH12A6FpeY",
+            authDomain: "my-project-a6208.firebaseapp.com",
+            projectId: "my-project-a6208",
+            storageBucket: "my-project-a6208.firebasestorage.app",
+            messagingSenderId: "784486701962",
+            appId: "1:784486701962:web:0d3cd002bbfd647e944673"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        window.fb = { db: getFirestore(app), collection, getDocs };
+    </script>
+
+    <!-- Operational Application Code -->
+    <script>
+        const e = React.createElement;
+        const CLASSES = ['ALL CLASSES', 'SSS 1', 'SSS 2', 'SSS 3', 'JSS 1', 'JSS 2', 'JSS 3'];
+
+        const BackupApp = () => {
+            const [selectedClass, setSelectedClass] = React.useState('ALL CLASSES');
+            const [status, setStatus] = React.useState('');
+            const [downloading, setDownloading] = React.useState(false);
+
+            const exportQuestions = async () => {
+                setDownloading(true);
+                setStatus('Connecting to database...');
+                try {
+                    const snap = await window.fb.getDocs(window.fb.collection(window.fb.db, "artifacts/my-project-a6208/public/data/questions"));
+                    const allQuestions = snap.docs.map(d => d.data());
+                    
+                    // Filter down based on selection
+                    const filtered = selectedClass === 'ALL CLASSES' 
+                        ? allQuestions 
+                        : allQuestions.filter(q => q.className === selectedClass);
+
+                    if (filtered.length === 0) {
+                        alert(`No questions found in database for layout selection: ${selectedClass}`);
+                        setDownloading(false);
+                        setStatus('');
+                        return;
+                    }
+
+                    // Convert to text framework compatible with uploader parsing rules
+                    let fileContent = "";
+                    filtered.forEach((q, idx) => {
+                        fileContent += `${idx + 1}. ${q.questionText}\n`;
+                        if (q.options && q.options.length > 0) {
+                            const optionLetters = ['a', 'b', 'd', 'e'];
+                            q.options.forEach((opt, oIdx) => {
+                                fileContent += `${optionLetters[oIdx]}) ${opt}\n`;
+                            });
+                            const correctLetter = optionLetters[q.correctOptionIndex] || 'a';
+                            fileContent += `Correct: ${correctLetter}\n`;
+                        }
+                        fileContent += `\n`; // Spacer row
+                    });
+
+                    // Download string output as txt file
+                    const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `CBT_Backup_${selectedClass.replace(' ', '_')}_2026.txt`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                    setStatus(`Successfully extracted ${filtered.length} database schemas!`);
+                } catch (err) {
+                    alert("Backup download error: " + err.message);
+                    setStatus('Extraction failed.');
+                }
+                setDownloading(false);
+            };
+
+            return e('div', { className: 'bg-white text-slate-900 p-8 rounded-[2.5rem] shadow-2xl border w-full max-w-md' },
+                e('div', { className: 'flex items-center justify-between mb-6 border-b pb-4' },
+                    e('div', null,
+                        e('h2', { className: 'text-xl font-black uppercase tracking-tight text-blue-600' }, 'Database Vault Backup'),
+                        e('p', { className: 'text-[10px] font-bold text-gray-400 uppercase tracking-wider' }, 'Question Extraction System')
+                    ),
+                    e('img', { src: 'https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png', className: 'w-12' })
+                ),
+
+                e('div', { className: 'mb-6' },
+                    e('label', { className: 'text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2' }, 'Select Target Class Group'),
+                    e('select', { 
+                        className: 'w-full p-4 border rounded-2xl font-black text-xs uppercase bg-blue-50 outline-none', 
+                        value: selectedClass, 
+                        onChange: img => { setSelectedClass(img.target.value); setStatus(''); }
+                    }, CLASSES.map(c => e('option', { key: c, value: c }, c)))
+                ),
+
+                e('div', { className: 'space-y-3' },
+                    e('button', {
+                        disabled: downloading,
+                        className: 'w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white py-4 rounded-xl font-black uppercase text-xs tracking-wider transition shadow-lg',
+                        onClick: exportQuestions
+                    }, downloading ? "Processing System Stream..." : "Download Questions Backup"),
+                    
+                    status && e('p', { className: 'text-center text-[11px] font-black uppercase tracking-wide text-emerald-600 bg-emerald-50 p-2 rounded-lg border border-emerald-100' }, status)
+                )
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(e(BackupApp));
+    </script>
+</body>
+</html>

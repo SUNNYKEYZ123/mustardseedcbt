@@ -388,7 +388,7 @@
             if (settings.isLive === false) return e('div', { className: 'h-screen flex items-center justify-center bg-slate-900 text-white font-black uppercase tracking-[0.5em]' }, 'Portal Offline/Exam has not Started!');
             
             if (finished) return e('div', { className: 'flex flex-col items-center justify-center min-h-screen bg-white p-6 text-center text-slate-900' },
-                e('img', { src: 'https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png', className: 'w-16 mb-8' }),
+                e('img', { src: 'https://mustardseedschool.com.ng/images/Logo.png', className: 'w-16 mb-8' }),
                 e('h1', { className: 'text-3xl font-black uppercase tracking-tighter text-slate-800 mb-4' }, 'Congratulations 🎉'),
                 e('p', { className: 'text-sm font-bold text-slate-500 mb-10 max-w-xs uppercase tracking-tight' }, 'Exam submitted successfully. Go to portal to check results.'),
                 e('button', { onClick: () => window.location.reload(), className: 'bg-slate-900 text-white px-12 py-4 rounded-2xl font-black uppercase text-xs' }, 'Logout')
@@ -396,7 +396,7 @@
 
             if (!student) return e('div', { className: 'flex items-center justify-center min-h-screen bg-slate-50 p-4 text-slate-900' },
                 e('div', { className: 'bg-white p-10 rounded-[2.5rem] shadow-2xl w-full max-w-sm border text-center' },
-                    e('img', { src: 'https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png', className: 'w-20 mx-auto mb-8' }),
+                    e('img', { src: 'https://mustardseedschool.com.ng/images/Logo.png', className: 'w-20 mx-auto mb-8' }),
                     e('h2', { className: 'text-2xl font-black mb-8 uppercase tracking-tighter text-slate-900' }, 'Student Portal'),
                     e('input', { className: 'w-full p-5 border-2 rounded-2xl mb-4 uppercase text-center font-black bg-slate-50 text-blue-600 outline-none focus:border-blue-400', placeholder: 'MS-XXXXX', onChange: e => setMsId(e.target.value) }),
                     e('button', { onClick: verify, className: 'w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest' }, loading ? "Wait..." : "Enter Exam")
@@ -456,7 +456,7 @@
             const [page, setPage] = React.useState('home');
             return e(AppContext.Provider, { value: { setPage } },
                 page === 'home' && e('div', { className: 'flex flex-col items-center justify-center min-h-screen text-center p-6 bg-slate-50 text-slate-900' },
-                    e('img', { src: 'https://sunnykeyz123.github.io/mustardseedschl/images/Logo.png', className: 'w-28 mb-8' }),
+                    e('img', { src: 'https://mustardseedschool.com.ng/images/Logo.png', className: 'w-28 mb-8' }),
                     e('h1', { className: 'text-5xl font-black mb-2 uppercase tracking-tighter text-slate-900' }, 'MUSTARD SEED'),
                     e('p', { className: 'text-slate-400 font-black text-[10px] tracking-[0.4em] uppercase mb-16' }, 'Advanced Computer Assessment Portal'),
                     e('div', { className: 'flex flex-col sm:flex-row gap-6' },
